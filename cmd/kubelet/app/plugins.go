@@ -45,11 +45,14 @@ func ProbeVolumePlugins(featureGate featuregate.FeatureGate) ([]volume.VolumePlu
 	//
 	// Kubelet does not currently need to configure volume plugins.
 	// If/when it does, see kube-controller-manager/app/plugins.go for example of using volume.VolumeConfig
-	var err error
-	allPlugins, err = appendLegacyProviderVolumes(allPlugins, featureGate)
-	if err != nil {
-		return allPlugins, err
-	}
+	// DELETE BY zhangjie
+	/*
+		var err error
+		allPlugins, err = appendLegacyProviderVolumes(allPlugins, featureGate)
+		if err != nil {
+			return allPlugins, err
+		}
+	*/
 	allPlugins = append(allPlugins, emptydir.ProbeVolumePlugins()...)
 	allPlugins = append(allPlugins, hostpath.ProbeVolumePlugins(volume.VolumeConfig{})...)
 	// DELETE BY zhangjie
