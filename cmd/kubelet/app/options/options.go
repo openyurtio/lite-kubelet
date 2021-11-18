@@ -97,6 +97,7 @@ type KubeletFlags struct {
 	// The Kubelet will load its initial configuration from this file.
 	// The path may be absolute or relative; relative paths are under the Kubelet's current working directory.
 	// Omit this flag to use the combination of built-in default configuration values and flags.
+	// DELETE BY zhangjie
 	KubeletConfigFile string
 
 	// registerNode enables automatic registration with the apiserver.
@@ -322,7 +323,8 @@ func (f *KubeletFlags) AddFlags(mainfs *pflag.FlagSet) {
 	f.ContainerRuntimeOptions.AddFlags(fs)
 	f.addOSFlags(fs)
 
-	fs.StringVar(&f.KubeletConfigFile, "config", f.KubeletConfigFile, "The Kubelet will load its initial configuration from this file. The path may be absolute or relative; relative paths start at the Kubelet's current working directory. Omit this flag to use the built-in default configuration values. Command-line flags override configuration from this file.")
+	// DELETE BY zhangjie
+	// fs.StringVar(&f.KubeletConfigFile, "config", f.KubeletConfigFile, "The Kubelet will load its initial configuration from this file. The path may be absolute or relative; relative paths start at the Kubelet's current working directory. Omit this flag to use the built-in default configuration values. Command-line flags override configuration from this file.")
 	fs.StringVar(&f.KubeConfig, "kubeconfig", f.KubeConfig, "Path to a kubeconfig file, specifying how to connect to the API server. Providing --kubeconfig enables API server mode, omitting --kubeconfig enables standalone mode.")
 
 	fs.StringVar(&f.BootstrapKubeconfig, "bootstrap-kubeconfig", f.BootstrapKubeconfig, "Path to a kubeconfig file that will be used to get client certificate for kubelet. "+

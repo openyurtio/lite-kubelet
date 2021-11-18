@@ -192,22 +192,25 @@ HTTP server: The kubelet can also listen for HTTP and respond to a simple API
 			}
 
 			// load kubelet config file, if provided
-			if configFile := kubeletFlags.KubeletConfigFile; len(configFile) > 0 {
-				kubeletConfig, err = loadConfigFile(configFile)
-				if err != nil {
-					klog.Fatal(err)
+			// DELETE BY zhangjie
+			/*
+				if configFile := kubeletFlags.KubeletConfigFile; len(configFile) > 0 {
+					kubeletConfig, err = loadConfigFile(configFile)
+					if err != nil {
+						klog.Fatal(err)
+					}
+					// We must enforce flag precedence by re-parsing the command line into the new object.
+					// This is necessary to preserve backwards-compatibility across binary upgrades.
+					// See issue #56171 for more details.
+					if err := kubeletConfigFlagPrecedence(kubeletConfig, args); err != nil {
+						klog.Fatal(err)
+					}
+					// update feature gates based on new config
+					if err := utilfeature.DefaultMutableFeatureGate.SetFromMap(kubeletConfig.FeatureGates); err != nil {
+						klog.Fatal(err)
+					}
 				}
-				// We must enforce flag precedence by re-parsing the command line into the new object.
-				// This is necessary to preserve backwards-compatibility across binary upgrades.
-				// See issue #56171 for more details.
-				if err := kubeletConfigFlagPrecedence(kubeletConfig, args); err != nil {
-					klog.Fatal(err)
-				}
-				// update feature gates based on new config
-				if err := utilfeature.DefaultMutableFeatureGate.SetFromMap(kubeletConfig.FeatureGates); err != nil {
-					klog.Fatal(err)
-				}
-			}
+			*/
 
 			// We always validate the local configuration (command line + config file).
 			// This is the default "last-known-good" config for dynamic config, and must always remain valid.
@@ -215,9 +218,12 @@ HTTP server: The kubelet can also listen for HTTP and respond to a simple API
 				klog.Fatal(err)
 			}
 
-			if (kubeletConfig.KubeletCgroups != "" && kubeletConfig.KubeReservedCgroup != "") && (0 != strings.Index(kubeletConfig.KubeletCgroups, kubeletConfig.KubeReservedCgroup)) {
-				klog.Warning("unsupported configuration:KubeletCgroups is not within KubeReservedCgroup")
-			}
+			// DELETE BY zhangjie
+			/*
+				if (kubeletConfig.KubeletCgroups != "" && kubeletConfig.KubeReservedCgroup != "") && (0 != strings.Index(kubeletConfig.KubeletCgroups, kubeletConfig.KubeReservedCgroup)) {
+					klog.Warning("unsupported configuration:KubeletCgroups is not within KubeReservedCgroup")
+				}
+			*/
 
 			// use dynamic kubelet config, if enabled
 			// DELETE BY zhangjie
@@ -277,7 +283,8 @@ HTTP server: The kubelet can also listen for HTTP and respond to a simple API
 
 	// keep cleanFlagSet separate, so Cobra doesn't pollute it with the global flags
 	kubeletFlags.AddFlags(cleanFlagSet)
-	options.AddKubeletConfigFlags(cleanFlagSet, kubeletConfig)
+	// DELETE BY zhangjie
+	// options.AddKubeletConfigFlags(cleanFlagSet, kubeletConfig)
 	options.AddGlobalFlags(cleanFlagSet)
 	cleanFlagSet.BoolP("help", "h", false, fmt.Sprintf("help for %s", cmd.Name()))
 
