@@ -220,30 +220,33 @@ HTTP server: The kubelet can also listen for HTTP and respond to a simple API
 			}
 
 			// use dynamic kubelet config, if enabled
-			var kubeletConfigController *dynamickubeletconfig.Controller
-			if dynamicConfigDir := kubeletFlags.DynamicConfigDir.Value(); len(dynamicConfigDir) > 0 {
-				var dynamicKubeletConfig *kubeletconfiginternal.KubeletConfiguration
-				dynamicKubeletConfig, kubeletConfigController, err = BootstrapKubeletConfigController(dynamicConfigDir,
-					func(kc *kubeletconfiginternal.KubeletConfiguration) error {
-						// Here, we enforce flag precedence inside the controller, prior to the controller's validation sequence,
-						// so that we get a complete validation at the same point where we can decide to reject dynamic config.
-						// This fixes the flag-precedence component of issue #63305.
-						// See issue #56171 for general details on flag precedence.
-						return kubeletConfigFlagPrecedence(kc, args)
-					})
-				if err != nil {
-					klog.Fatal(err)
-				}
-				// If we should just use our existing, local config, the controller will return a nil config
-				if dynamicKubeletConfig != nil {
-					kubeletConfig = dynamicKubeletConfig
-					// Note: flag precedence was already enforced in the controller, prior to validation,
-					// by our above transform function. Now we simply update feature gates from the new config.
-					if err := utilfeature.DefaultMutableFeatureGate.SetFromMap(kubeletConfig.FeatureGates); err != nil {
+			// DELETE BY zhangjie
+			/*
+				var kubeletConfigController *dynamickubeletconfig.Controller
+				if dynamicConfigDir := kubeletFlags.DynamicConfigDir.Value(); len(dynamicConfigDir) > 0 {
+					var dynamicKubeletConfig *kubeletconfiginternal.KubeletConfiguration
+					dynamicKubeletConfig, kubeletConfigController, err = BootstrapKubeletConfigController(dynamicConfigDir,
+						func(kc *kubeletconfiginternal.KubeletConfiguration) error {
+							// Here, we enforce flag precedence inside the controller, prior to the controller's validation sequence,
+							// so that we get a complete validation at the same point where we can decide to reject dynamic config.
+							// This fixes the flag-precedence component of issue #63305.
+							// See issue #56171 for general details on flag precedence.
+							return kubeletConfigFlagPrecedence(kc, args)
+						})
+					if err != nil {
 						klog.Fatal(err)
 					}
+					// If we should just use our existing, local config, the controller will return a nil config
+					if dynamicKubeletConfig != nil {
+						kubeletConfig = dynamicKubeletConfig
+						// Note: flag precedence was already enforced in the controller, prior to validation,
+						// by our above transform function. Now we simply update feature gates from the new config.
+						if err := utilfeature.DefaultMutableFeatureGate.SetFromMap(kubeletConfig.FeatureGates); err != nil {
+							klog.Fatal(err)
+						}
+					}
 				}
-			}
+			*/
 
 			// construct a KubeletServer from kubeletFlags and kubeletConfig
 			kubeletServer := &options.KubeletServer{
@@ -258,7 +261,8 @@ HTTP server: The kubelet can also listen for HTTP and respond to a simple API
 			}
 
 			// add the kubelet config controller to kubeletDeps
-			kubeletDeps.KubeletConfigController = kubeletConfigController
+			// DELETE BY zhangjie
+			// kubeletDeps.KubeletConfigController = kubeletConfigController
 
 			// set up signal context here in order to be reused by kubelet and docker shim
 			ctx := genericapiserver.SetupSignalContext()
@@ -778,12 +782,15 @@ func run(ctx context.Context, s *options.KubeletServer, kubeDeps *kubelet.Depend
 	}
 
 	// If the kubelet config controller is available, and dynamic config is enabled, start the config and status sync loops
-	if utilfeature.DefaultFeatureGate.Enabled(features.DynamicKubeletConfig) && len(s.DynamicConfigDir.Value()) > 0 &&
-		kubeDeps.KubeletConfigController != nil && !standaloneMode && !s.RunOnce {
-		if err := kubeDeps.KubeletConfigController.StartSync(kubeDeps.KubeClient, kubeDeps.EventClient, string(nodeName)); err != nil {
-			return err
+	// DELETE BY zhangjie
+	/*
+		if utilfeature.DefaultFeatureGate.Enabled(features.DynamicKubeletConfig) && len(s.DynamicConfigDir.Value()) > 0 &&
+			kubeDeps.KubeletConfigController != nil && !standaloneMode && !s.RunOnce {
+			if err := kubeDeps.KubeletConfigController.StartSync(kubeDeps.KubeClient, kubeDeps.EventClient, string(nodeName)); err != nil {
+				return err
+			}
 		}
-	}
+	*/
 
 	if s.HealthzPort > 0 {
 		mux := http.NewServeMux()
