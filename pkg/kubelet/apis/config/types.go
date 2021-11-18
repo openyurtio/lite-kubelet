@@ -363,6 +363,7 @@ type KubeletConfiguration struct {
 	// This option specifies the cpu list reserved for the host level system threads and kubernetes related threads.
 	// This provide a "static" CPU list rather than the "dynamic" list by system-reserved and kube-reserved.
 	// This option overwrites CPUs provided by system-reserved and kube-reserved.
+	// DELETE BY zhangjie
 	ReservedSystemCPUs string
 	// The previous version for which you want to show hidden metrics.
 	// Only the previous minor version is meaningful, other values will not be allowed.

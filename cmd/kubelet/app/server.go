@@ -651,46 +651,51 @@ func run(ctx context.Context, s *options.KubeletServer, kubeDeps *kubelet.Depend
 		}
 
 		var reservedSystemCPUs cpuset.CPUSet
-		if s.ReservedSystemCPUs != "" {
-			// is it safe do use CAdvisor here ??
-			machineInfo, err := kubeDeps.CAdvisorInterface.MachineInfo()
-			if err != nil {
-				// if can't use CAdvisor here, fall back to non-explicit cpu list behavor
-				klog.Warning("Failed to get MachineInfo, set reservedSystemCPUs to empty")
-				reservedSystemCPUs = cpuset.NewCPUSet()
+		// ADD BY zhangjie
+		reservedSystemCPUs = cpuset.NewCPUSet()
+		/*
+			if s.ReservedSystemCPUs != "" {
+				// is it safe do use CAdvisor here ??
+				machineInfo, err := kubeDeps.CAdvisorInterface.MachineInfo()
+				if err != nil {
+					// if can't use CAdvisor here, fall back to non-explicit cpu list behavor
+					klog.Warning("Failed to get MachineInfo, set reservedSystemCPUs to empty")
+					reservedSystemCPUs = cpuset.NewCPUSet()
+				} else {
+					var errParse error
+					reservedSystemCPUs, errParse = cpuset.Parse(s.ReservedSystemCPUs)
+					if errParse != nil {
+						// invalid cpu list is provided, set reservedSystemCPUs to empty, so it won't overwrite kubeReserved/systemReserved
+						klog.Infof("Invalid ReservedSystemCPUs \"%s\"", s.ReservedSystemCPUs)
+						return errParse
+					}
+					reservedList := reservedSystemCPUs.ToSlice()
+					first := reservedList[0]
+					last := reservedList[len(reservedList)-1]
+					if first < 0 || last >= machineInfo.NumCores {
+						// the specified cpuset is outside of the range of what the machine has
+						klog.Infof("Invalid cpuset specified by --reserved-cpus")
+						return fmt.Errorf("Invalid cpuset %q specified by --reserved-cpus", s.ReservedSystemCPUs)
+					}
+				}
 			} else {
-				var errParse error
-				reservedSystemCPUs, errParse = cpuset.Parse(s.ReservedSystemCPUs)
-				if errParse != nil {
-					// invalid cpu list is provided, set reservedSystemCPUs to empty, so it won't overwrite kubeReserved/systemReserved
-					klog.Infof("Invalid ReservedSystemCPUs \"%s\"", s.ReservedSystemCPUs)
-					return errParse
-				}
-				reservedList := reservedSystemCPUs.ToSlice()
-				first := reservedList[0]
-				last := reservedList[len(reservedList)-1]
-				if first < 0 || last >= machineInfo.NumCores {
-					// the specified cpuset is outside of the range of what the machine has
-					klog.Infof("Invalid cpuset specified by --reserved-cpus")
-					return fmt.Errorf("Invalid cpuset %q specified by --reserved-cpus", s.ReservedSystemCPUs)
-				}
+				reservedSystemCPUs = cpuset.NewCPUSet()
 			}
-		} else {
-			reservedSystemCPUs = cpuset.NewCPUSet()
-		}
 
-		if reservedSystemCPUs.Size() > 0 {
-			// at cmd option valication phase it is tested either --system-reserved-cgroup or --kube-reserved-cgroup is specified, so overwrite should be ok
-			klog.Infof("Option --reserved-cpus is specified, it will overwrite the cpu setting in KubeReserved=\"%v\", SystemReserved=\"%v\".", s.KubeReserved, s.SystemReserved)
-			if s.KubeReserved != nil {
-				delete(s.KubeReserved, "cpu")
+			if reservedSystemCPUs.Size() > 0 {
+				// at cmd option valication phase it is tested either --system-reserved-cgroup or --kube-reserved-cgroup is specified, so overwrite should be ok
+				klog.Infof("Option --reserved-cpus is specified, it will overwrite the cpu setting in KubeReserved=\"%v\", SystemReserved=\"%v\".", s.KubeReserved, s.SystemReserved)
+				if s.KubeReserved != nil {
+					delete(s.KubeReserved, "cpu")
+				}
+				if s.SystemReserved == nil {
+					s.SystemReserved = make(map[string]string)
+				}
+				s.SystemReserved["cpu"] = strconv.Itoa(reservedSystemCPUs.Size())
+				klog.Infof("After cpu setting is overwritten, KubeReserved=\"%v\", SystemReserved=\"%v\"", s.KubeReserved, s.SystemReserved)
 			}
-			if s.SystemReserved == nil {
-				s.SystemReserved = make(map[string]string)
-			}
-			s.SystemReserved["cpu"] = strconv.Itoa(reservedSystemCPUs.Size())
-			klog.Infof("After cpu setting is overwritten, KubeReserved=\"%v\", SystemReserved=\"%v\"", s.KubeReserved, s.SystemReserved)
-		}
+		*/
+
 		kubeReserved, err := parseResourceList(s.KubeReserved)
 		if err != nil {
 			return err
