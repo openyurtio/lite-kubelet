@@ -184,6 +184,7 @@ func (m *managerImpl) Start(diskInfoProvider DiskInfoProvider, podFunc ActivePod
 		klog.Infof(message)
 		m.synchronize(diskInfoProvider, podFunc)
 	}
+	// Node BY zhangjie , Default is false
 	if m.config.KernelMemcgNotification {
 		for _, threshold := range m.config.Thresholds {
 			if threshold.Signal == evictionapi.SignalMemoryAvailable || threshold.Signal == evictionapi.SignalAllocatableMemoryAvailable {

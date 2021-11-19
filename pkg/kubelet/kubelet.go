@@ -324,7 +324,9 @@ func PreInitRuntimeService(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		return err
 	}
 
-	kubeDeps.useLegacyCadvisorStats = cadvisor.UsingLegacyCadvisorStats(containerRuntime, remoteRuntimeEndpoint)
+	// DELETE by zhangjie , default use container, so useLegacyCadvisorStats = false
+	//kubeDeps.useLegacyCadvisorStats = cadvisor.UsingLegacyCadvisorStats(containerRuntime, remoteRuntimeEndpoint)
+	kubeDeps.useLegacyCadvisorStats = false
 
 	return nil
 }
@@ -403,23 +405,28 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		HighThresholdPercent: int(kubeCfg.ImageGCHighThresholdPercent),
 		LowThresholdPercent:  int(kubeCfg.ImageGCLowThresholdPercent),
 	}
+	// DELETE BY zhangjie
+	// eviction Manager 不需要， 删除
+	/*
+		enforceNodeAllocatable := kubeCfg.EnforceNodeAllocatable
+		if experimentalNodeAllocatableIgnoreEvictionThreshold {
+			// Do not provide kubeCfg.EnforceNodeAllocatable to eviction threshold parsing if we are not enforcing Evictions
+			enforceNodeAllocatable = []string{}
+		}
 
-	enforceNodeAllocatable := kubeCfg.EnforceNodeAllocatable
-	if experimentalNodeAllocatableIgnoreEvictionThreshold {
-		// Do not provide kubeCfg.EnforceNodeAllocatable to eviction threshold parsing if we are not enforcing Evictions
-		enforceNodeAllocatable = []string{}
-	}
-	thresholds, err := eviction.ParseThresholdConfig(enforceNodeAllocatable, kubeCfg.EvictionHard, kubeCfg.EvictionSoft, kubeCfg.EvictionSoftGracePeriod, kubeCfg.EvictionMinimumReclaim)
-	if err != nil {
-		return nil, err
-	}
-	evictionConfig := eviction.Config{
-		PressureTransitionPeriod: kubeCfg.EvictionPressureTransitionPeriod.Duration,
-		MaxPodGracePeriodSeconds: int64(kubeCfg.EvictionMaxPodGracePeriod),
-		Thresholds:               thresholds,
-		KernelMemcgNotification:  kernelMemcgNotification,
-		PodCgroupRoot:            kubeDeps.ContainerManager.GetPodCgroupRoot(),
-	}
+		thresholds, err := eviction.ParseThresholdConfig(enforceNodeAllocatable, kubeCfg.EvictionHard, kubeCfg.EvictionSoft, kubeCfg.EvictionSoftGracePeriod, kubeCfg.EvictionMinimumReclaim)
+		if err != nil {
+			return nil, err
+		}
+
+		evictionConfig := eviction.Config{
+			PressureTransitionPeriod: kubeCfg.EvictionPressureTransitionPeriod.Duration,
+			MaxPodGracePeriodSeconds: int64(kubeCfg.EvictionMaxPodGracePeriod),
+			Thresholds:               thresholds,
+			KernelMemcgNotification:  kernelMemcgNotification,
+			PodCgroupRoot:            kubeDeps.ContainerManager.GetPodCgroupRoot(),
+		}
+	*/
 
 	var serviceLister corelisters.ServiceLister
 	var serviceHasSynced cache.InformerSynced
@@ -660,6 +667,8 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 			klet.containerRuntime,
 			klet.statusManager)
 	} else {
+		// ADDED BY zhangjie
+		// because use container, so use CRIStatusProvier
 		klet.StatsProvider = stats.NewCRIStatsProvider(
 			klet.cadvisor,
 			klet.resourceAnalyzer,
@@ -762,9 +771,13 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	klet.backOff = flowcontrol.NewBackOff(backOffPeriod, MaxContainerBackOff)
 	klet.podKiller = NewPodKiller(klet)
 
-	etcHostsPathFunc := func(podUID types.UID) string { return getEtcHostsPath(klet.getPodDir(podUID)) }
+	// DELETE BY zhangjie, 不需要驱逐manager, 轻量化场景， pod 不需要驱逐
+	// etcHostsPathFunc := func(podUID types.UID) string { return getEtcHostsPath(klet.getPodDir(podUID)) }
 	// setup eviction manager
-	evictionManager, evictionAdmitHandler := eviction.NewManager(klet.resourceAnalyzer, evictionConfig, killPodNow(klet.podWorkers, kubeDeps.Recorder), klet.podManager.GetMirrorPodByPod, klet.imageManager, klet.containerGC, kubeDeps.Recorder, nodeRef, klet.clock, etcHostsPathFunc)
+	//evictionManager, evictionAdmitHandler := eviction.NewManager(klet.resourceAnalyzer, evictionConfig, killPodNow(klet.podWorkers, kubeDeps.Recorder), klet.podManager.GetMirrorPodByPod, klet.imageManager, klet.containerGC, kubeDeps.Recorder, nodeRef, klet.clock, etcHostsPathFunc)
+
+	// ADDED BY zhangjie , 增加驱逐manager 的模拟器
+	evictionManager, evictionAdmitHandler := eviction.NewManagerYurt()
 
 	klet.evictionManager = evictionManager
 	klet.admitHandlers.AddPodAdmitHandler(evictionAdmitHandler)
@@ -1368,7 +1381,9 @@ func (kl *Kubelet) initializeRuntimeDependentModules() {
 		klog.Fatalf("Failed to start ContainerManager %v", err)
 	}
 	// eviction manager must start after cadvisor because it needs to know if the container runtime has a dedicated imagefs
-	kl.evictionManager.Start(kl.StatsProvider, kl.GetActivePods, kl.podResourcesAreReclaimed, evictionMonitoringPeriod)
+	// DELETE By zhangjie
+	// 不需要驱逐Manger， Pod 在轻量化场景不需要驱逐
+	// kl.evictionManager.Start(kl.StatsProvider, kl.GetActivePods, kl.podResourcesAreReclaimed, evictionMonitoringPeriod)
 
 	// container log manager must start after container runtime is up to retrieve information from container runtime
 	// and inform container to reopen log file after log rotation.
