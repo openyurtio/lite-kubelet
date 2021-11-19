@@ -35,7 +35,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
@@ -45,7 +44,6 @@ import (
 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
 	"k8s.io/kubernetes/pkg/api/v1/resource"
 	podshelper "k8s.io/kubernetes/pkg/apis/core/pods"
-	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
 	v1qos "k8s.io/kubernetes/pkg/apis/core/v1/helper/qos"
 	"k8s.io/kubernetes/pkg/features"
 	"k8s.io/kubernetes/pkg/fieldpath"
@@ -53,7 +51,6 @@ import (
 	kubecontainer "k8s.io/kubernetes/pkg/kubelet/container"
 	"k8s.io/kubernetes/pkg/kubelet/cri/streaming/portforward"
 	remotecommandserver "k8s.io/kubernetes/pkg/kubelet/cri/streaming/remotecommand"
-	"k8s.io/kubernetes/pkg/kubelet/envvars"
 	"k8s.io/kubernetes/pkg/kubelet/eviction"
 	"k8s.io/kubernetes/pkg/kubelet/images"
 	"k8s.io/kubernetes/pkg/kubelet/status"
@@ -513,53 +510,59 @@ var masterServices = sets.NewString("kubernetes")
 // getServiceEnvVarMap makes a map[string]string of env vars for services a
 // pod in namespace ns should see.
 func (kl *Kubelet) getServiceEnvVarMap(ns string, enableServiceLinks bool) (map[string]string, error) {
-	var (
-		serviceMap = make(map[string]*v1.Service)
-		m          = make(map[string]string)
-	)
+	return make(map[string]string), nil
 
-	// Get all service resources from the master (via a cache),
-	// and populate them into service environment variables.
-	if kl.serviceLister == nil {
-		// Kubelets without masters (e.g. plain GCE ContainerVM) don't set env vars.
-		return m, nil
-	}
-	services, err := kl.serviceLister.List(labels.Everything())
-	if err != nil {
-		return m, fmt.Errorf("failed to list services when setting up env vars")
-	}
+	// DELETE BY zhangjie , env 不支持service
+	/*
+		var (
+			serviceMap = make(map[string]*v1.Service)
+			m          = make(map[string]string)
+		)
 
-	// project the services in namespace ns onto the master services
-	for i := range services {
-		service := services[i]
-		// ignore services where ClusterIP is "None" or empty
-		if !v1helper.IsServiceIPSet(service) {
-			continue
+		// Get all service resources from the master (via a cache),
+		// and populate them into service environment variables.
+		if kl.serviceLister == nil {
+			// Kubelets without masters (e.g. plain GCE ContainerVM) don't set env vars.
+			return m, nil
 		}
-		serviceName := service.Name
+		services, err := kl.serviceLister.List(labels.Everything())
+		if err != nil {
+			return m, fmt.Errorf("failed to list services when setting up env vars")
+		}
 
-		// We always want to add environment variabled for master services
-		// from the master service namespace, even if enableServiceLinks is false.
-		// We also add environment variables for other services in the same
-		// namespace, if enableServiceLinks is true.
-		if service.Namespace == kl.masterServiceNamespace && masterServices.Has(serviceName) {
-			if _, exists := serviceMap[serviceName]; !exists {
+		// project the services in namespace ns onto the master services
+		for i := range services {
+			service := services[i]
+			// ignore services where ClusterIP is "None" or empty
+			if !v1helper.IsServiceIPSet(service) {
+				continue
+			}
+			serviceName := service.Name
+
+			// We always want to add environment variabled for master services
+			// from the master service namespace, even if enableServiceLinks is false.
+			// We also add environment variables for other services in the same
+			// namespace, if enableServiceLinks is true.
+			if service.Namespace == kl.masterServiceNamespace && masterServices.Has(serviceName) {
+				if _, exists := serviceMap[serviceName]; !exists {
+					serviceMap[serviceName] = service
+				}
+			} else if service.Namespace == ns && enableServiceLinks {
 				serviceMap[serviceName] = service
 			}
-		} else if service.Namespace == ns && enableServiceLinks {
-			serviceMap[serviceName] = service
 		}
-	}
 
-	mappedServices := []*v1.Service{}
-	for key := range serviceMap {
-		mappedServices = append(mappedServices, serviceMap[key])
-	}
+		mappedServices := []*v1.Service{}
+		for key := range serviceMap {
+			mappedServices = append(mappedServices, serviceMap[key])
+		}
 
-	for _, e := range envvars.FromServices(mappedServices) {
-		m[e.Name] = e.Value
-	}
-	return m, nil
+		for _, e := range envvars.FromServices(mappedServices) {
+			m[e.Name] = e.Value
+		}
+		return m, nil
+
+	*/
 }
 
 // Make the environment variables for a pod in the given namespace.

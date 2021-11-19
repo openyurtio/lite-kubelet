@@ -434,16 +434,20 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 
 	var serviceLister corelisters.ServiceLister
 	var serviceHasSynced cache.InformerSynced
-	if kubeDeps.KubeClient != nil {
-		kubeInformers := informers.NewSharedInformerFactory(kubeDeps.KubeClient, 0)
-		serviceLister = kubeInformers.Core().V1().Services().Lister()
-		serviceHasSynced = kubeInformers.Core().V1().Services().Informer().HasSynced
-		kubeInformers.Start(wait.NeverStop)
-	} else {
-		serviceIndexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
-		serviceLister = corelisters.NewServiceLister(serviceIndexer)
-		serviceHasSynced = func() bool { return true }
-	}
+	serviceHasSynced = func() bool { return true }
+	// DELETE BY zhangjie
+	/*
+		if kubeDeps.KubeClient != nil {
+			kubeInformers := informers.NewSharedInformerFactory(kubeDeps.KubeClient, 0)
+			serviceLister = kubeInformers.Core().V1().Services().Lister()
+			serviceHasSynced = kubeInformers.Core().V1().Services().Informer().HasSynced
+			kubeInformers.Start(wait.NeverStop)
+		} else {
+			serviceIndexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
+			serviceLister = corelisters.NewServiceLister(serviceIndexer)
+			serviceHasSynced = func() bool { return true }
+		}
+	*/
 
 	var nodeHasSynced cache.InformerSynced
 	var nodeLister corelisters.NodeLister
