@@ -610,15 +610,25 @@ func (cm *containerManagerImpl) Start(node *v1.Node,
 	// allocatable of the node
 	cm.nodeInfo = node
 
-	if utilfeature.DefaultFeatureGate.Enabled(kubefeatures.LocalStorageCapacityIsolation) {
-		rootfs, err := cm.cadvisorInterface.RootFsInfo()
-		if err != nil {
-			return fmt.Errorf("failed to get rootfs info: %v", err)
+	// DELETE BY zhangjie
+	// 因RootFsInfo  接口没有实现，对于临时存储的限制，暂时不支持
+	/*
+	  capacity:
+	    cpu: "4"
+	    ephemeral-storage: 41152812Ki
+	*/
+	//
+	/*
+		if utilfeature.DefaultFeatureGate.Enabled(kubefeatures.LocalStorageCapacityIsolation) {
+			rootfs, err := cm.cadvisorInterface.RootFsInfo()
+			if err != nil {
+				return fmt.Errorf("failed to get rootfs info: %v", err)
+			}
+			for rName, rCap := range cadvisor.EphemeralStorageCapacityFromFsInfo(rootfs) {
+				cm.capacity[rName] = rCap
+			}
 		}
-		for rName, rCap := range cadvisor.EphemeralStorageCapacityFromFsInfo(rootfs) {
-			cm.capacity[rName] = rCap
-		}
-	}
+	*/
 
 	// Ensure that node allocatable configuration is valid.
 	if err := cm.validateNodeAllocatable(); err != nil {
