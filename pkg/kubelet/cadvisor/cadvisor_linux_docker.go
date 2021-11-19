@@ -18,8 +18,7 @@ limitations under the License.
 
 package cadvisor
 
-import (
-	// We only want to perform this docker specific cadvisor init when we are not
-	// using the `dockerless` build tag.
-	_ "github.com/google/cadvisor/container/docker/install"
-)
+// We only want to perform this docker specific cadvisor init when we are not
+// using the `dockerless` build tag.
+// DELETE BY zhangjie , no need docker
+//_ "github.com/google/cadvisor/container/docker/install"
