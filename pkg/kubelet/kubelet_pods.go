@@ -33,7 +33,6 @@ import (
 	"sync"
 
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -599,9 +598,11 @@ func (kl *Kubelet) makeEnvironmentVariables(pod *v1.Pod, container *v1.Container
 	}
 
 	var (
-		configMaps = make(map[string]*v1.ConfigMap)
-		secrets    = make(map[string]*v1.Secret)
-		tmpEnv     = make(map[string]string)
+		// DELETE BY zhangjie
+		//configMaps = make(map[string]*v1.ConfigMap)
+		// DELETE BY zhangjie
+		//secrets = make(map[string]*v1.Secret)
+		tmpEnv = make(map[string]string)
 	)
 
 	// Env will override EnvFrom variables.
@@ -609,75 +610,83 @@ func (kl *Kubelet) makeEnvironmentVariables(pod *v1.Pod, container *v1.Container
 	for _, envFrom := range container.EnvFrom {
 		switch {
 		case envFrom.ConfigMapRef != nil:
-			cm := envFrom.ConfigMapRef
-			name := cm.Name
-			configMap, ok := configMaps[name]
-			if !ok {
-				if kl.kubeClient == nil {
-					return result, fmt.Errorf("couldn't get configMap %v/%v, no kubeClient defined", pod.Namespace, name)
+			klog.Warningf("Pod envFrom ref do not support configmap")
+			// DELETE BY zhangjie
+			/*
+				cm := envFrom.ConfigMapRef
+				name := cm.Name
+				configMap, ok := configMaps[name]
+				if !ok {
+					if kl.kubeClient == nil {
+						return result, fmt.Errorf("couldn't get configMap %v/%v, no kubeClient defined", pod.Namespace, name)
+					}
+					optional := cm.Optional != nil && *cm.Optional
+					configMap, err = kl.configMapManager.GetConfigMap(pod.Namespace, name)
+					if err != nil {
+						if errors.IsNotFound(err) && optional {
+							// ignore error when marked optional
+							continue
+						}
+						return result, err
+					}
+					configMaps[name] = configMap
 				}
-				optional := cm.Optional != nil && *cm.Optional
-				configMap, err = kl.configMapManager.GetConfigMap(pod.Namespace, name)
-				if err != nil {
-					if errors.IsNotFound(err) && optional {
-						// ignore error when marked optional
+
+				invalidKeys := []string{}
+				for k, v := range configMap.Data {
+					if len(envFrom.Prefix) > 0 {
+						k = envFrom.Prefix + k
+					}
+					if errMsgs := utilvalidation.IsEnvVarName(k); len(errMsgs) != 0 {
+						invalidKeys = append(invalidKeys, k)
 						continue
 					}
-					return result, err
+					tmpEnv[k] = v
 				}
-				configMaps[name] = configMap
-			}
-
-			invalidKeys := []string{}
-			for k, v := range configMap.Data {
-				if len(envFrom.Prefix) > 0 {
-					k = envFrom.Prefix + k
+				if len(invalidKeys) > 0 {
+					sort.Strings(invalidKeys)
+					kl.recorder.Eventf(pod, v1.EventTypeWarning, "InvalidEnvironmentVariableNames", "Keys [%s] from the EnvFrom configMap %s/%s were skipped since they are considered invalid environment variable names.", strings.Join(invalidKeys, ", "), pod.Namespace, name)
 				}
-				if errMsgs := utilvalidation.IsEnvVarName(k); len(errMsgs) != 0 {
-					invalidKeys = append(invalidKeys, k)
-					continue
-				}
-				tmpEnv[k] = v
-			}
-			if len(invalidKeys) > 0 {
-				sort.Strings(invalidKeys)
-				kl.recorder.Eventf(pod, v1.EventTypeWarning, "InvalidEnvironmentVariableNames", "Keys [%s] from the EnvFrom configMap %s/%s were skipped since they are considered invalid environment variable names.", strings.Join(invalidKeys, ", "), pod.Namespace, name)
-			}
+			*/
 		case envFrom.SecretRef != nil:
-			s := envFrom.SecretRef
-			name := s.Name
-			secret, ok := secrets[name]
-			if !ok {
-				if kl.kubeClient == nil {
-					return result, fmt.Errorf("couldn't get secret %v/%v, no kubeClient defined", pod.Namespace, name)
+			klog.Warningf("Pod envFrom ref do not support secret")
+			// DELETE BY zhangjie
+			/*
+				s := envFrom.SecretRef
+				name := s.Name
+				secret, ok := secrets[name]
+				if !ok {
+					if kl.kubeClient == nil {
+						return result, fmt.Errorf("couldn't get secret %v/%v, no kubeClient defined", pod.Namespace, name)
+					}
+					optional := s.Optional != nil && *s.Optional
+					secret, err = kl.secretManager.GetSecret(pod.Namespace, name)
+					if err != nil {
+						if errors.IsNotFound(err) && optional {
+							// ignore error when marked optional
+							continue
+						}
+						return result, err
+					}
+					secrets[name] = secret
 				}
-				optional := s.Optional != nil && *s.Optional
-				secret, err = kl.secretManager.GetSecret(pod.Namespace, name)
-				if err != nil {
-					if errors.IsNotFound(err) && optional {
-						// ignore error when marked optional
+
+				invalidKeys := []string{}
+				for k, v := range secret.Data {
+					if len(envFrom.Prefix) > 0 {
+						k = envFrom.Prefix + k
+					}
+					if errMsgs := utilvalidation.IsEnvVarName(k); len(errMsgs) != 0 {
+						invalidKeys = append(invalidKeys, k)
 						continue
 					}
-					return result, err
+					tmpEnv[k] = string(v)
 				}
-				secrets[name] = secret
-			}
-
-			invalidKeys := []string{}
-			for k, v := range secret.Data {
-				if len(envFrom.Prefix) > 0 {
-					k = envFrom.Prefix + k
+				if len(invalidKeys) > 0 {
+					sort.Strings(invalidKeys)
+					kl.recorder.Eventf(pod, v1.EventTypeWarning, "InvalidEnvironmentVariableNames", "Keys [%s] from the EnvFrom secret %s/%s were skipped since they are considered invalid environment variable names.", strings.Join(invalidKeys, ", "), pod.Namespace, name)
 				}
-				if errMsgs := utilvalidation.IsEnvVarName(k); len(errMsgs) != 0 {
-					invalidKeys = append(invalidKeys, k)
-					continue
-				}
-				tmpEnv[k] = string(v)
-			}
-			if len(invalidKeys) > 0 {
-				sort.Strings(invalidKeys)
-				kl.recorder.Eventf(pod, v1.EventTypeWarning, "InvalidEnvironmentVariableNames", "Keys [%s] from the EnvFrom secret %s/%s were skipped since they are considered invalid environment variable names.", strings.Join(invalidKeys, ", "), pod.Namespace, name)
-			}
+			*/
 		}
 	}
 
@@ -716,60 +725,68 @@ func (kl *Kubelet) makeEnvironmentVariables(pod *v1.Pod, container *v1.Container
 					return result, err
 				}
 			case envVar.ValueFrom.ConfigMapKeyRef != nil:
-				cm := envVar.ValueFrom.ConfigMapKeyRef
-				name := cm.Name
-				key := cm.Key
-				optional := cm.Optional != nil && *cm.Optional
-				configMap, ok := configMaps[name]
-				if !ok {
-					if kl.kubeClient == nil {
-						return result, fmt.Errorf("couldn't get configMap %v/%v, no kubeClient defined", pod.Namespace, name)
+				klog.Warningf("Pod env valueFrom do not support configmap")
+				// DELETE BY zhangjie
+				/*
+					cm := envVar.ValueFrom.ConfigMapKeyRef
+					name := cm.Name
+					key := cm.Key
+					optional := cm.Optional != nil && *cm.Optional
+					configMap, ok := configMaps[name]
+					if !ok {
+						if kl.kubeClient == nil {
+							return result, fmt.Errorf("couldn't get configMap %v/%v, no kubeClient defined", pod.Namespace, name)
+						}
+						configMap, err = kl.configMapManager.GetConfigMap(pod.Namespace, name)
+						if err != nil {
+							if errors.IsNotFound(err) && optional {
+								// ignore error when marked optional
+								continue
+							}
+							return result, err
+						}
+						configMaps[name] = configMap
 					}
-					configMap, err = kl.configMapManager.GetConfigMap(pod.Namespace, name)
-					if err != nil {
-						if errors.IsNotFound(err) && optional {
-							// ignore error when marked optional
+					runtimeVal, ok = configMap.Data[key]
+					if !ok {
+						if optional {
 							continue
 						}
-						return result, err
+						return result, fmt.Errorf("couldn't find key %v in ConfigMap %v/%v", key, pod.Namespace, name)
 					}
-					configMaps[name] = configMap
-				}
-				runtimeVal, ok = configMap.Data[key]
-				if !ok {
-					if optional {
-						continue
-					}
-					return result, fmt.Errorf("couldn't find key %v in ConfigMap %v/%v", key, pod.Namespace, name)
-				}
+				*/
 			case envVar.ValueFrom.SecretKeyRef != nil:
-				s := envVar.ValueFrom.SecretKeyRef
-				name := s.Name
-				key := s.Key
-				optional := s.Optional != nil && *s.Optional
-				secret, ok := secrets[name]
-				if !ok {
-					if kl.kubeClient == nil {
-						return result, fmt.Errorf("couldn't get secret %v/%v, no kubeClient defined", pod.Namespace, name)
+				klog.Warningf("Pod env valueFrom do not support secret")
+				// DELETE BY zhangjie
+				/*
+					s := envVar.ValueFrom.SecretKeyRef
+					name := s.Name
+					key := s.Key
+					optional := s.Optional != nil && *s.Optional
+					secret, ok := secrets[name]
+					if !ok {
+						if kl.kubeClient == nil {
+							return result, fmt.Errorf("couldn't get secret %v/%v, no kubeClient defined", pod.Namespace, name)
+						}
+						secret, err = kl.secretManager.GetSecret(pod.Namespace, name)
+						if err != nil {
+							if errors.IsNotFound(err) && optional {
+								// ignore error when marked optional
+								continue
+							}
+							return result, err
+						}
+						secrets[name] = secret
 					}
-					secret, err = kl.secretManager.GetSecret(pod.Namespace, name)
-					if err != nil {
-						if errors.IsNotFound(err) && optional {
-							// ignore error when marked optional
+					runtimeValBytes, ok := secret.Data[key]
+					if !ok {
+						if optional {
 							continue
 						}
-						return result, err
+						return result, fmt.Errorf("couldn't find key %v in Secret %v/%v", key, pod.Namespace, name)
 					}
-					secrets[name] = secret
-				}
-				runtimeValBytes, ok := secret.Data[key]
-				if !ok {
-					if optional {
-						continue
-					}
-					return result, fmt.Errorf("couldn't find key %v in Secret %v/%v", key, pod.Namespace, name)
-				}
-				runtimeVal = string(runtimeValBytes)
+					runtimeVal = string(runtimeValBytes)
+				*/
 			}
 		}
 		// Accesses apiserver+Pods.
@@ -877,15 +894,18 @@ func (kl *Kubelet) makePodDataDirs(pod *v1.Pod) error {
 func (kl *Kubelet) getPullSecretsForPod(pod *v1.Pod) []v1.Secret {
 	pullSecrets := []v1.Secret{}
 
-	for _, secretRef := range pod.Spec.ImagePullSecrets {
-		secret, err := kl.secretManager.GetSecret(pod.Namespace, secretRef.Name)
-		if err != nil {
-			klog.Warningf("Unable to retrieve pull secret %s/%s for %s/%s due to %v.  The image pull may not succeed.", pod.Namespace, secretRef.Name, pod.Namespace, pod.Name, err)
-			continue
-		}
+	// DELETE BY zhangjie 暂时不使用私有镜像下载， 下载镜像，通过别的方式，预先下载
+	/*
+		for _, secretRef := range pod.Spec.ImagePullSecrets {
+			secret, err := kl.secretManager.GetSecret(pod.Namespace, secretRef.Name)
+			if err != nil {
+				klog.Warningf("Unable to retrieve pull secret %s/%s for %s/%s due to %v.  The image pull may not succeed.", pod.Namespace, secretRef.Name, pod.Namespace, pod.Name, err)
+				continue
+			}
 
-		pullSecrets = append(pullSecrets, *secret)
-	}
+			pullSecrets = append(pullSecrets, *secret)
+		}
+	*/
 
 	return pullSecrets
 }
