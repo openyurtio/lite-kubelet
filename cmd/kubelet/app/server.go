@@ -546,24 +546,28 @@ func run(ctx context.Context, s *options.KubeletServer, kubeDeps *kubelet.Depend
 		}
 	}
 
-	if kubeDeps.Cloud == nil {
-		if !cloudprovider.IsExternal(s.CloudProvider) {
-			cloudprovider.DeprecationWarningForProvider(s.CloudProvider)
-			cloud, err := cloudprovider.InitCloudProvider(s.CloudProvider, s.CloudConfigFile)
-			if err != nil {
-				return err
+	// DELETED BY zhangjie ,cloud is nil
+	/*
+		if kubeDeps.Cloud == nil {
+			if !cloudprovider.IsExternal(s.CloudProvider) {
+				cloudprovider.DeprecationWarningForProvider(s.CloudProvider)
+				cloud, err := cloudprovider.InitCloudProvider(s.CloudProvider, s.CloudConfigFile)
+				if err != nil {
+					return err
+				}
+				if cloud != nil {
+					klog.V(2).Infof("Successfully initialized cloud provider: %q from the config file: %q\n", s.CloudProvider, s.CloudConfigFile)
+				}
+				kubeDeps.Cloud = cloud
 			}
-			if cloud != nil {
-				klog.V(2).Infof("Successfully initialized cloud provider: %q from the config file: %q\n", s.CloudProvider, s.CloudConfigFile)
-			}
-			kubeDeps.Cloud = cloud
 		}
-	}
+	*/
 
 	hostName, err := nodeutil.GetHostname(s.HostnameOverride)
 	if err != nil {
 		return err
 	}
+	// Note by zhangjie cloud is nil
 	nodeName, err := getNodeName(kubeDeps.Cloud, hostName)
 	if err != nil {
 		return err

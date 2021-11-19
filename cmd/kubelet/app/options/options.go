@@ -384,7 +384,8 @@ func (f *KubeletFlags) AddFlags(mainfs *pflag.FlagSet) {
 	fs.MarkDeprecated("experimental-mounter-path", "will be removed in 1.23. in favor of using CSI.")
 	fs.BoolVar(&f.ExperimentalCheckNodeCapabilitiesBeforeMount, "experimental-check-node-capabilities-before-mount", f.ExperimentalCheckNodeCapabilitiesBeforeMount, "[Experimental] if set true, the kubelet will check the underlying node for required components (binaries, etc.) before performing the mount")
 	fs.MarkDeprecated("experimental-check-node-capabilities-before-mount", "will be removed in 1.23. in favor of using CSI.")
-	fs.StringVar(&f.CloudProvider, "cloud-provider", f.CloudProvider, "The provider for cloud services. Set to empty string for running with no cloud provider. If set, the cloud provider determines the name of the node (consult cloud provider documentation to determine if and how the hostname is used).")
+	// DELETE BY zhangjie , clouder-provider no need
+	//fs.StringVar(&f.CloudProvider, "cloud-provider", f.CloudProvider, "The provider for cloud services. Set to empty string for running with no cloud provider. If set, the cloud provider determines the name of the node (consult cloud provider documentation to determine if and how the hostname is used).")
 	fs.MarkDeprecated("cloud-provider", "will be removed in 1.23, in favor of removing cloud provider code from Kubelet.")
 	fs.StringVar(&f.CloudConfigFile, "cloud-config", f.CloudConfigFile, "The path to the cloud provider configuration file. Empty string for no configuration file.")
 	fs.MarkDeprecated("cloud-config", "will be removed in 1.23, in favor of removing cloud provider code from Kubelet.")

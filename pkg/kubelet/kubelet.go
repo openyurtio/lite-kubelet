@@ -545,9 +545,12 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		lastContainerStartedTime:                newTimeCache(),
 	}
 
-	if klet.cloud != nil {
-		klet.cloudResourceSyncManager = cloudresource.NewSyncManager(klet.cloud, nodeName, klet.nodeStatusUpdateFrequency)
-	}
+	// DELETE BY zhangjie , cloud is nil
+	/*
+		if klet.cloud != nil {
+			klet.cloudResourceSyncManager = cloudresource.NewSyncManager(klet.cloud, nodeName, klet.nodeStatusUpdateFrequency)
+		}
+	*/
 
 	var secretManager secret.Manager
 	var configMapManager configmap.Manager
@@ -1413,9 +1416,12 @@ func (kl *Kubelet) Run(updates <-chan kubetypes.PodUpdate) {
 	}
 
 	// Start the cloud provider sync manager
-	if kl.cloudResourceSyncManager != nil {
-		go kl.cloudResourceSyncManager.Run(wait.NeverStop)
-	}
+	// DELETE BY zhangjie , cloudResourceSyncManager is nil , because cloud is nil
+	/*
+		if kl.cloudResourceSyncManager != nil {
+			go kl.cloudResourceSyncManager.Run(wait.NeverStop)
+		}
+	*/
 
 	if err := kl.initializeModules(); err != nil {
 		kl.recorder.Eventf(kl.nodeRef, v1.EventTypeWarning, events.KubeletSetupFailed, err.Error())
