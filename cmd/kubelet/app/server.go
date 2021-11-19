@@ -474,6 +474,7 @@ func initConfigz(kc *kubeletconfiginternal.KubeletConfiguration) error {
 // makeEventRecorder sets up kubeDeps.Recorder if it's nil. It's a no-op otherwise.
 func makeEventRecorder(kubeDeps *kubelet.Dependencies, nodeName types.NodeName) {
 	if kubeDeps.Recorder != nil {
+		klog.Warningf("No Recoder, do not make event recorder")
 		return
 	}
 	eventBroadcaster := record.NewBroadcaster()
@@ -522,15 +523,21 @@ func run(ctx context.Context, s *options.KubeletServer, kubeDeps *kubelet.Depend
 		klog.Errorf("unable to register KubeletConfiguration with configz, error: %v", err)
 	}
 
-	if len(s.ShowHiddenMetricsForVersion) > 0 {
-		metrics.SetShowHidden()
-	}
+	// DELETE BY zhangjie
+	/*
+		if len(s.ShowHiddenMetricsForVersion) > 0 {
+			metrics.SetShowHidden()
+		}
+	*/
 
 	// About to get clients and such, detect standaloneMode
 	standaloneMode := true
-	if len(s.KubeConfig) > 0 {
-		standaloneMode = false
-	}
+	// DELETE BY zhangjie
+	/*
+		if len(s.KubeConfig) > 0 {
+			standaloneMode = false
+		}
+	*/
 
 	if kubeDeps == nil {
 		kubeDeps, err = UnsecuredDependencies(s, featureGate)
@@ -571,43 +578,46 @@ func run(ctx context.Context, s *options.KubeletServer, kubeDeps *kubelet.Depend
 		klog.Warningf("standalone mode, no API client")
 
 	case kubeDeps.KubeClient == nil, kubeDeps.EventClient == nil, kubeDeps.HeartbeatClient == nil:
-		clientConfig, closeAllConns, err := buildKubeletClientConfig(ctx, s, nodeName)
-		if err != nil {
-			return err
-		}
-		if closeAllConns == nil {
-			return errors.New("closeAllConns must be a valid function other than nil")
-		}
-		kubeDeps.OnHeartbeatFailure = closeAllConns
+		// DELETE BY zhangjie
+		/*
+			clientConfig, closeAllConns, err := buildKubeletClientConfig(ctx, s, nodeName)
+			if err != nil {
+				return err
+			}
+			if closeAllConns == nil {
+				return errors.New("closeAllConns must be a valid function other than nil")
+			}
+			kubeDeps.OnHeartbeatFailure = closeAllConns
 
-		kubeDeps.KubeClient, err = clientset.NewForConfig(clientConfig)
-		if err != nil {
-			return fmt.Errorf("failed to initialize kubelet client: %v", err)
-		}
+			kubeDeps.KubeClient, err = clientset.NewForConfig(clientConfig)
+			if err != nil {
+				return fmt.Errorf("failed to initialize kubelet client: %v", err)
+			}
 
-		// make a separate client for events
-		eventClientConfig := *clientConfig
-		eventClientConfig.QPS = float32(s.EventRecordQPS)
-		eventClientConfig.Burst = int(s.EventBurst)
-		kubeDeps.EventClient, err = v1core.NewForConfig(&eventClientConfig)
-		if err != nil {
-			return fmt.Errorf("failed to initialize kubelet event client: %v", err)
-		}
+			// make a separate client for events
+			eventClientConfig := *clientConfig
+			eventClientConfig.QPS = float32(s.EventRecordQPS)
+			eventClientConfig.Burst = int(s.EventBurst)
+			kubeDeps.EventClient, err = v1core.NewForConfig(&eventClientConfig)
+			if err != nil {
+				return fmt.Errorf("failed to initialize kubelet event client: %v", err)
+			}
 
-		// make a separate client for heartbeat with throttling disabled and a timeout attached
-		heartbeatClientConfig := *clientConfig
-		heartbeatClientConfig.Timeout = s.KubeletConfiguration.NodeStatusUpdateFrequency.Duration
-		// The timeout is the minimum of the lease duration and status update frequency
-		leaseTimeout := time.Duration(s.KubeletConfiguration.NodeLeaseDurationSeconds) * time.Second
-		if heartbeatClientConfig.Timeout > leaseTimeout {
-			heartbeatClientConfig.Timeout = leaseTimeout
-		}
+			// make a separate client for heartbeat with throttling disabled and a timeout attached
+			heartbeatClientConfig := *clientConfig
+			heartbeatClientConfig.Timeout = s.KubeletConfiguration.NodeStatusUpdateFrequency.Duration
+			// The timeout is the minimum of the lease duration and status update frequency
+			leaseTimeout := time.Duration(s.KubeletConfiguration.NodeLeaseDurationSeconds) * time.Second
+			if heartbeatClientConfig.Timeout > leaseTimeout {
+				heartbeatClientConfig.Timeout = leaseTimeout
+			}
 
-		heartbeatClientConfig.QPS = float32(-1)
-		kubeDeps.HeartbeatClient, err = clientset.NewForConfig(&heartbeatClientConfig)
-		if err != nil {
-			return fmt.Errorf("failed to initialize kubelet heartbeat client: %v", err)
-		}
+			heartbeatClientConfig.QPS = float32(-1)
+			kubeDeps.HeartbeatClient, err = clientset.NewForConfig(&heartbeatClientConfig)
+			if err != nil {
+				return fmt.Errorf("failed to initialize kubelet heartbeat client: %v", err)
+			}
+		*/
 	}
 
 	if kubeDeps.Auth == nil {
@@ -1204,11 +1214,14 @@ func startKubelet(k kubelet.Bootstrap, podCfg *config.PodConfig, kubeCfg *kubele
 	go k.Run(podCfg.Updates())
 
 	// start the kubelet server
-	if enableServer {
-		go k.ListenAndServe(net.ParseIP(kubeCfg.Address), uint(kubeCfg.Port), kubeDeps.TLSOptions, kubeDeps.Auth,
-			enableCAdvisorJSONEndpoints, kubeCfg.EnableDebuggingHandlers, kubeCfg.EnableContentionProfiling, kubeCfg.EnableSystemLogHandler)
+	// DELETE BY zhangjie
+	/*
+		if enableServer {
+			go k.ListenAndServe(net.ParseIP(kubeCfg.Address), uint(kubeCfg.Port), kubeDeps.TLSOptions, kubeDeps.Auth,
+				enableCAdvisorJSONEndpoints, kubeCfg.EnableDebuggingHandlers, kubeCfg.EnableContentionProfiling, kubeCfg.EnableSystemLogHandler)
 
-	}
+		}
+	*/
 	if kubeCfg.ReadOnlyPort > 0 {
 		go k.ListenAndServeReadOnly(net.ParseIP(kubeCfg.Address), uint(kubeCfg.ReadOnlyPort), enableCAdvisorJSONEndpoints)
 	}

@@ -28,7 +28,8 @@ import (
 
 	// Register supported container handlers.
 	_ "github.com/google/cadvisor/container/containerd/install"
-	_ "github.com/google/cadvisor/container/crio/install"
+	// DELETE BY zhangjie
+	//_ "github.com/google/cadvisor/container/crio/install"
 	_ "github.com/google/cadvisor/container/systemd/install"
 
 	// Register cloud info providers.
