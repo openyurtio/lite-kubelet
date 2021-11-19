@@ -91,7 +91,6 @@ import (
 	kubeletmetrics "k8s.io/kubernetes/pkg/kubelet/metrics"
 	"k8s.io/kubernetes/pkg/kubelet/server"
 	"k8s.io/kubernetes/pkg/kubelet/stats/pidlimit"
-	kubetypes "k8s.io/kubernetes/pkg/kubelet/types"
 	utilfs "k8s.io/kubernetes/pkg/util/filesystem"
 	"k8s.io/kubernetes/pkg/util/flock"
 	nodeutil "k8s.io/kubernetes/pkg/util/node"
@@ -186,9 +185,12 @@ HTTP server: The kubelet can also listen for HTTP and respond to a simple API
 				klog.Fatal(err)
 			}
 
-			if kubeletFlags.ContainerRuntime == "remote" && cleanFlagSet.Changed("pod-infra-container-image") {
-				klog.Warning("Warning: For remote container runtime, --pod-infra-container-image is ignored in kubelet, which should be set in that remote runtime instead")
-			}
+			// DELETE BY zhangjie
+			/*
+				if kubeletFlags.ContainerRuntime == "remote" && cleanFlagSet.Changed("pod-infra-container-image") {
+					klog.Warning("Warning: For remote container runtime, --pod-infra-container-image is ignored in kubelet, which should be set in that remote runtime instead")
+				}
+			*/
 
 			// load kubelet config file, if provided
 			// DELETE BY zhangjie
@@ -382,13 +384,17 @@ func UnsecuredDependencies(s *options.KubeletServer, featureGate featuregate.Fea
 	var pluginRunner = exec.New()
 
 	var dockerOptions *kubelet.DockerOptions
-	if s.ContainerRuntime == kubetypes.DockerContainerRuntime {
-		dockerOptions = &kubelet.DockerOptions{
-			DockerEndpoint:            s.DockerEndpoint,
-			RuntimeRequestTimeout:     s.RuntimeRequestTimeout.Duration,
-			ImagePullProgressDeadline: s.ImagePullProgressDeadline.Duration,
+
+	// DELETE BY zhangjie , default containerruntime is remote , not docker
+	/*
+		if s.ContainerRuntime == kubetypes.DockerContainerRuntime {
+			dockerOptions = &kubelet.DockerOptions{
+				DockerEndpoint:            s.DockerEndpoint,
+				RuntimeRequestTimeout:     s.RuntimeRequestTimeout.Duration,
+				ImagePullProgressDeadline: s.ImagePullProgressDeadline.Duration,
+			}
 		}
-	}
+	*/
 
 	plugins, err := ProbeVolumePlugins(featureGate)
 	if err != nil {
@@ -624,14 +630,17 @@ func run(ctx context.Context, s *options.KubeletServer, kubeDeps *kubelet.Depend
 		*/
 	}
 
-	if kubeDeps.Auth == nil {
-		auth, runAuthenticatorCAReload, err := BuildAuth(nodeName, kubeDeps.KubeClient, s.KubeletConfiguration)
-		if err != nil {
-			return err
+	// DELETE BY zhangjie delete Auth
+	/*
+		if kubeDeps.Auth == nil {
+			auth, runAuthenticatorCAReload, err := BuildAuth(nodeName, kubeDeps.KubeClient, s.KubeletConfiguration)
+			if err != nil {
+				return err
+			}
+			kubeDeps.Auth = auth
+			runAuthenticatorCAReload(ctx.Done())
 		}
-		kubeDeps.Auth = auth
-		runAuthenticatorCAReload(ctx.Done())
-	}
+	*/
 
 	var cgroupRoots []string
 	nodeAllocatableRoot := cm.NodeAllocatableRoot(s.CgroupRoot, s.CgroupsPerQOS, s.CgroupDriver)

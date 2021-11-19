@@ -45,10 +45,14 @@ func NewContainerRuntimeOptions() *config.ContainerRuntimeOptions {
 	}
 
 	return &config.ContainerRuntimeOptions{
-		ContainerRuntime:          kubetypes.DockerContainerRuntime,
-		DockerEndpoint:            dockerEndpoint,
-		DockershimRootDirectory:   "/var/lib/dockershim",
-		PodSandboxImage:           defaultPodSandboxImage,
+		//ContainerRuntime:          kubetypes.DockerContainerRuntime,
+		// CHANGED BY zhangjie , change docker to remote
+		ContainerRuntime:        kubetypes.RemoteContainerRuntime,
+		DockerEndpoint:          dockerEndpoint,
+		DockershimRootDirectory: "/var/lib/dockershim",
+		//PodSandboxImage:           defaultPodSandboxImage,
+		// CHANGED BY zhangjie , PodSandboxImage use "", because , use containerd, not docker
+		PodSandboxImage:           "",
 		ImagePullProgressDeadline: metav1.Duration{Duration: 1 * time.Minute},
 
 		CNIBinDir:   "/opt/cni/bin",

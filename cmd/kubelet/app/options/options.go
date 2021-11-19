@@ -176,7 +176,9 @@ type KubeletFlags struct {
 func NewKubeletFlags() *KubeletFlags {
 	remoteRuntimeEndpoint := ""
 	if runtime.GOOS == "linux" {
-		remoteRuntimeEndpoint = "unix:///var/run/dockershim.sock"
+		// CHANGED by zhangjie change dockershim.sock to containerd.sock default
+		//remoteRuntimeEndpoint = "unix:///var/run/dockershim.sock"
+		remoteRuntimeEndpoint = "/var/run/containerd/containerd.sock"
 	} else if runtime.GOOS == "windows" {
 		remoteRuntimeEndpoint = "npipe:////./pipe/dockershim"
 	}

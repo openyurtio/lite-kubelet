@@ -288,6 +288,7 @@ func PreInitRuntimeService(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	remoteRuntimeEndpoint string,
 	remoteImageEndpoint string,
 	nonMasqueradeCIDR string) error {
+
 	if remoteRuntimeEndpoint != "" {
 		// remoteImageEndpoint is same as remoteRuntimeEndpoint if not explicitly specified
 		if remoteImageEndpoint == "" {
@@ -295,26 +296,29 @@ func PreInitRuntimeService(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		}
 	}
 
-	switch containerRuntime {
-	case kubetypes.DockerContainerRuntime:
-		klog.Warningf("Using dockershim is deprecated, please consider using a full-fledged CRI implementation")
-		if err := runDockershim(
-			kubeCfg,
-			kubeDeps,
-			crOptions,
-			runtimeCgroups,
-			remoteRuntimeEndpoint,
-			remoteImageEndpoint,
-			nonMasqueradeCIDR,
-		); err != nil {
-			return err
+	// DELETE BY zhangjie , default use container(remote)
+	/*
+		switch containerRuntime {
+		case kubetypes.DockerContainerRuntime:
+			klog.Warningf("Using dockershim is deprecated, please consider using a full-fledged CRI implementation")
+			if err := runDockershim(
+				kubeCfg,
+				kubeDeps,
+				crOptions,
+				runtimeCgroups,
+				remoteRuntimeEndpoint,
+				remoteImageEndpoint,
+				nonMasqueradeCIDR,
+			); err != nil {
+				return err
+			}
+		case kubetypes.RemoteContainerRuntime:
+			// No-op.
+			break
+		default:
+			return fmt.Errorf("unsupported CRI runtime: %q", containerRuntime)
 		}
-	case kubetypes.RemoteContainerRuntime:
-		// No-op.
-		break
-	default:
-		return fmt.Errorf("unsupported CRI runtime: %q", containerRuntime)
-	}
+	*/
 
 	var err error
 	if kubeDeps.RemoteRuntimeService, err = remote.NewRemoteRuntimeService(remoteRuntimeEndpoint, kubeCfg.RuntimeRequestTimeout.Duration); err != nil {
