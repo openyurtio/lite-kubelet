@@ -597,8 +597,11 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 
 	imageBackOff := flowcontrol.NewBackOff(backOffPeriod, MaxContainerBackOff)
 
-	klet.livenessManager = proberesults.NewManager()
-	klet.startupManager = proberesults.NewManager()
+	// DELETED BY zhangjie
+	// klet.livenessManager = proberesults.NewManager()
+	// DELETED BY zhangjie
+	// klet.startupManager = proberesults.NewManager()
+
 	klet.podCache = kubecontainer.NewCache()
 
 	// podManager is also responsible for keeping secretManager and configMapManager contents up-to-date.
@@ -634,7 +637,9 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 
 	runtime, err := kuberuntime.NewKubeGenericRuntimeManager(
 		kubecontainer.FilterEventRecorder(kubeDeps.Recorder),
+		// NOTE BY zhangjie livenessManager is useless
 		klet.livenessManager,
+		// NOTE BY zhangjie  startupManager is useless
 		klet.startupManager,
 		seccompProfileRoot,
 		machineInfo,
@@ -728,12 +733,15 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		}
 	}
 
-	klet.probeManager = prober.NewManager(
-		klet.statusManager,
-		klet.livenessManager,
-		klet.startupManager,
-		klet.runner,
-		kubeDeps.Recorder)
+	// DELETED BY zhangjie
+	/*
+		klet.probeManager = prober.NewManager(
+			klet.statusManager,
+			klet.livenessManager,
+			klet.startupManager,
+			klet.runner,
+			kubeDeps.Recorder)
+	*/
 
 	tokenManager := token.NewManager(kubeDeps.KubeClient)
 
@@ -1461,7 +1469,8 @@ func (kl *Kubelet) Run(updates <-chan kubetypes.PodUpdate) {
 
 	// Start component sync loops.
 	kl.statusManager.Start()
-	kl.probeManager.Start()
+	// DELETE BY zhangjie
+	// kl.probeManager.Start()
 
 	// Start syncing RuntimeClasses if enabled.
 	if kl.runtimeClassManager != nil {
@@ -2002,21 +2011,25 @@ func (kl *Kubelet) syncLoopIteration(configCh <-chan kubetypes.PodUpdate, handle
 		}
 		klog.V(4).Infof("SyncLoop (SYNC): %d pods; %s", len(podsToSync), format.Pods(podsToSync))
 		handler.HandlePodSyncs(podsToSync)
-	case update := <-kl.livenessManager.Updates():
-		if update.Result == proberesults.Failure {
-			// The liveness manager detected a failure; sync the pod.
 
-			// We should not use the pod from livenessManager, because it is never updated after
-			// initialization.
-			pod, ok := kl.podManager.GetPodByUID(update.PodUID)
-			if !ok {
-				// If the pod no longer exists, ignore the update.
-				klog.V(4).Infof("SyncLoop (container unhealthy): ignore irrelevant update: %#v", update)
-				break
+	// DELETE BY zhangjie
+	/*
+		case update := <-kl.livenessManager.Updates():
+			if update.Result == proberesults.Failure {
+				// The liveness manager detected a failure; sync the pod.
+
+				// We should not use the pod from livenessManager, because it is never updated after
+				// initialization.
+				pod, ok := kl.podManager.GetPodByUID(update.PodUID)
+				if !ok {
+					// If the pod no longer exists, ignore the update.
+					klog.V(4).Infof("SyncLoop (container unhealthy): ignore irrelevant update: %#v", update)
+					break
+				}
+				klog.V(1).Infof("SyncLoop (container unhealthy): %q", format.Pod(pod))
+				handler.HandlePodSyncs([]*v1.Pod{pod})
 			}
-			klog.V(1).Infof("SyncLoop (container unhealthy): %q", format.Pod(pod))
-			handler.HandlePodSyncs([]*v1.Pod{pod})
-		}
+	*/
 	case <-housekeepingCh:
 		if !kl.sourcesReady.AllReady() {
 			// If the sources aren't ready or volume manager has not yet synced the states,
@@ -2110,7 +2123,8 @@ func (kl *Kubelet) HandlePodAdditions(pods []*v1.Pod) {
 		}
 		mirrorPod, _ := kl.podManager.GetMirrorPodByPod(pod)
 		kl.dispatchWork(pod, kubetypes.SyncPodCreate, mirrorPod, start)
-		kl.probeManager.AddPod(pod)
+		// DLETE BY zhangjie
+		// kl.probeManager.AddPod(pod)
 	}
 }
 
@@ -2144,7 +2158,8 @@ func (kl *Kubelet) HandlePodRemoves(pods []*v1.Pod) {
 		if err := kl.deletePod(pod); err != nil {
 			klog.V(2).Infof("Failed to delete pod %q, err: %v", format.Pod(pod), err)
 		}
-		kl.probeManager.RemovePod(pod)
+		// DELETE BY zhangjie
+		// kl.probeManager.RemovePod(pod)
 	}
 }
 
