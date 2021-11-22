@@ -24,7 +24,6 @@ import (
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/features"
 	"k8s.io/kubernetes/pkg/volume"
-	"k8s.io/kubernetes/pkg/volume/cinder"
 	"k8s.io/kubernetes/pkg/volume/csimigration"
 	"k8s.io/kubernetes/pkg/volume/gcepd"
 	"k8s.io/kubernetes/pkg/volume/vsphere_volume"
@@ -60,7 +59,7 @@ func appendLegacyProviderVolumes(allPlugins []volume.VolumePlugin, featureGate f
 	// DELETE BY zhangjie
 	//pluginMigrationStatus[plugins.AWSEBSInTreePluginName] = pluginInfo{pluginMigrationFeature: features.CSIMigrationAWS, pluginMigrationCompleteFeature: features.CSIMigrationAWSComplete, pluginProbeFunction: awsebs.ProbeVolumePlugins}
 	pluginMigrationStatus[plugins.GCEPDInTreePluginName] = pluginInfo{pluginMigrationFeature: features.CSIMigrationGCE, pluginMigrationCompleteFeature: features.CSIMigrationGCEComplete, pluginProbeFunction: gcepd.ProbeVolumePlugins}
-	pluginMigrationStatus[plugins.CinderInTreePluginName] = pluginInfo{pluginMigrationFeature: features.CSIMigrationOpenStack, pluginMigrationCompleteFeature: features.CSIMigrationOpenStackComplete, pluginProbeFunction: cinder.ProbeVolumePlugins}
+	//pluginMigrationStatus[plugins.CinderInTreePluginName] = pluginInfo{pluginMigrationFeature: features.CSIMigrationOpenStack, pluginMigrationCompleteFeature: features.CSIMigrationOpenStackComplete, pluginProbeFunction: cinder.ProbeVolumePlugins}
 	//pluginMigrationStatus[plugins.AzureDiskInTreePluginName] = pluginInfo{pluginMigrationFeature: features.CSIMigrationAzureDisk, pluginMigrationCompleteFeature: features.CSIMigrationAzureDiskComplete, pluginProbeFunction: azuredd.ProbeVolumePlugins}
 	//pluginMigrationStatus[plugins.AzureFileInTreePluginName] = pluginInfo{pluginMigrationFeature: features.CSIMigrationAzureFile, pluginMigrationCompleteFeature: features.CSIMigrationAzureFileComplete, pluginProbeFunction: azure_file.ProbeVolumePlugins}
 	pluginMigrationStatus[plugins.VSphereInTreePluginName] = pluginInfo{pluginMigrationFeature: features.CSIMigrationvSphere, pluginMigrationCompleteFeature: features.CSIMigrationvSphereComplete, pluginProbeFunction: vsphere_volume.ProbeVolumePlugins}
