@@ -98,7 +98,6 @@ import (
 	"k8s.io/kubernetes/pkg/util/rlimit"
 	"k8s.io/kubernetes/pkg/volume/util/hostutil"
 	"k8s.io/kubernetes/pkg/volume/util/subpath"
-	"k8s.io/utils/exec"
 	utilnet "k8s.io/utils/net"
 )
 
@@ -381,7 +380,8 @@ func UnsecuredDependencies(s *options.KubeletServer, featureGate featuregate.Fea
 	mounter := mount.New(s.ExperimentalMounterPath)
 	subpather := subpath.New(mounter)
 	hu := hostutil.NewHostUtil()
-	var pluginRunner = exec.New()
+	// DELETED BY zhangjie
+	// var pluginRunner = exec.New()
 
 	var dockerOptions *kubelet.DockerOptions
 
@@ -401,22 +401,24 @@ func UnsecuredDependencies(s *options.KubeletServer, featureGate featuregate.Fea
 		return nil, err
 	}
 	return &kubelet.Dependencies{
-		Auth:                nil, // default does not enforce auth[nz]
-		CAdvisorInterface:   nil, // cadvisor.New launches background processes (bg http.ListenAndServe, and some bg cleaners), not set here
-		Cloud:               nil, // cloud provider might start background processes
-		ContainerManager:    nil,
-		DockerOptions:       dockerOptions,
-		KubeClient:          nil,
-		HeartbeatClient:     nil,
-		EventClient:         nil,
-		HostUtil:            hu,
-		Mounter:             mounter,
-		Subpather:           subpather,
-		OOMAdjuster:         oom.NewOOMAdjuster(),
-		OSInterface:         kubecontainer.RealOS{},
-		VolumePlugins:       plugins,
-		DynamicPluginProber: GetDynamicPluginProber(s.VolumePluginDir, pluginRunner),
-		TLSOptions:          tlsOptions}, nil
+		Auth:              nil, // default does not enforce auth[nz]
+		CAdvisorInterface: nil, // cadvisor.New launches background processes (bg http.ListenAndServe, and some bg cleaners), not set here
+		Cloud:             nil, // cloud provider might start background processes
+		ContainerManager:  nil,
+		DockerOptions:     dockerOptions,
+		KubeClient:        nil,
+		HeartbeatClient:   nil,
+		EventClient:       nil,
+		HostUtil:          hu,
+		Mounter:           mounter,
+		Subpather:         subpather,
+		OOMAdjuster:       oom.NewOOMAdjuster(),
+		OSInterface:       kubecontainer.RealOS{},
+		VolumePlugins:     plugins,
+		// CHANGED BY zhangjie , GetDynamicPluginProber(s.VolumePluginDir, pluginRunner) to nil
+		DynamicPluginProber: nil,
+		//DynamicPluginProber: GetDynamicPluginProber(s.VolumePluginDir, pluginRunner),
+		TLSOptions: tlsOptions}, nil
 }
 
 // Run runs the specified KubeletServer with the given Dependencies. This should never exit.

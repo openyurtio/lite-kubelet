@@ -24,12 +24,10 @@ import (
 	_ "k8s.io/kubernetes/pkg/credentialprovider/azure"
 	_ "k8s.io/kubernetes/pkg/credentialprovider/gcp"
 	"k8s.io/kubernetes/pkg/volume/hostpath"
-	"k8s.io/utils/exec"
 
 	// Volume plugins
 	"k8s.io/kubernetes/pkg/volume"
 	"k8s.io/kubernetes/pkg/volume/emptydir"
-	"k8s.io/kubernetes/pkg/volume/flexvolume"
 
 	// Cloud providers
 	_ "k8s.io/kubernetes/pkg/cloudprovider/providers"
@@ -79,9 +77,12 @@ func ProbeVolumePlugins(featureGate featuregate.FeatureGate) ([]volume.VolumePlu
 	return allPlugins, nil
 }
 
+// DELETED BY zhangjie, useless
 // GetDynamicPluginProber gets the probers of dynamically discoverable plugins
 // for kubelet.
 // Currently only Flexvolume plugins are dynamically discoverable.
-func GetDynamicPluginProber(pluginDir string, runner exec.Interface) volume.DynamicPluginProber {
+/*
+ func GetDynamicPluginProber(pluginDir string, runner exec.Interface) volume.DynamicPluginProber {
 	return flexvolume.GetDynamicPluginProber(pluginDir, runner)
 }
+*/
