@@ -263,10 +263,13 @@ type volumeManager struct {
 func (vm *volumeManager) Run(sourcesReady config.SourcesReady, stopCh <-chan struct{}) {
 	defer runtime.HandleCrash()
 
-	if vm.kubeClient != nil {
-		// start informer for CSIDriver
-		go vm.volumePluginMgr.Run(stopCh)
-	}
+	// DELETED BY zhangjie, no need run volumepluginMgr
+	/*
+		if vm.kubeClient != nil {
+			// start informer for CSIDriver
+			go vm.volumePluginMgr.Run(stopCh)
+		}
+	*/
 
 	go vm.desiredStateOfWorldPopulator.Run(sourcesReady, stopCh)
 	klog.V(2).Infof("The desired_state_of_world populator starts")
