@@ -58,7 +58,6 @@ import (
 	"k8s.io/component-helpers/apimachinery/lease"
 	internalapi "k8s.io/cri-api/pkg/apis"
 	"k8s.io/klog/v2"
-	pluginwatcherapi "k8s.io/kubelet/pkg/apis/pluginregistration/v1"
 	statsapi "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 	api "k8s.io/kubernetes/pkg/apis/core"
 	"k8s.io/kubernetes/pkg/features"
@@ -87,7 +86,6 @@ import (
 	oomwatcher "k8s.io/kubernetes/pkg/kubelet/oom"
 	"k8s.io/kubernetes/pkg/kubelet/pleg"
 	"k8s.io/kubernetes/pkg/kubelet/pluginmanager"
-	plugincache "k8s.io/kubernetes/pkg/kubelet/pluginmanager/cache"
 	kubepod "k8s.io/kubernetes/pkg/kubelet/pod"
 	"k8s.io/kubernetes/pkg/kubelet/preemption"
 	"k8s.io/kubernetes/pkg/kubelet/prober"
@@ -112,7 +110,6 @@ import (
 	"k8s.io/kubernetes/pkg/util/oom"
 	"k8s.io/kubernetes/pkg/util/selinux"
 	"k8s.io/kubernetes/pkg/volume"
-	"k8s.io/kubernetes/pkg/volume/csi"
 	"k8s.io/kubernetes/pkg/volume/util/hostutil"
 	"k8s.io/kubernetes/pkg/volume/util/subpath"
 	"k8s.io/kubernetes/pkg/volume/util/volumepathhandler"
@@ -753,10 +750,13 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	if err != nil {
 		return nil, err
 	}
-	klet.pluginManager = pluginmanager.NewPluginManager(
-		klet.getPluginsRegistrationDir(), /* sockDir */
-		kubeDeps.Recorder,
-	)
+	// DELETED BY zhangjie
+	/*
+		klet.pluginManager = pluginmanager.NewPluginManager(
+			klet.getPluginsRegistrationDir(),
+			kubeDeps.Recorder,
+		)
+	*/
 
 	// If the experimentalMounterPathFlag is set, we do not want to
 	// check node capabilities since the mount path is not the default
@@ -1408,13 +1408,16 @@ func (kl *Kubelet) initializeRuntimeDependentModules() {
 	// container log manager must start after container runtime is up to retrieve information from container runtime
 	// and inform container to reopen log file after log rotation.
 	kl.containerLogManager.Start()
-	// Adding Registration Callback function for CSI Driver
-	kl.pluginManager.AddHandler(pluginwatcherapi.CSIPlugin, plugincache.PluginHandler(csi.PluginHandler))
-	// Adding Registration Callback function for Device Manager
-	kl.pluginManager.AddHandler(pluginwatcherapi.DevicePlugin, kl.containerManager.GetPluginRegistrationHandler())
-	// Start the plugin manager
-	klog.V(4).Infof("starting plugin manager")
-	go kl.pluginManager.Run(kl.sourcesReady, wait.NeverStop)
+	// DELETED BY zhangjie
+	/*
+		// Adding Registration Callback function for CSI Driver
+		kl.pluginManager.AddHandler(pluginwatcherapi.CSIPlugin, plugincache.PluginHandler(csi.PluginHandler))
+		// Adding Registration Callback function for Device Manager
+		kl.pluginManager.AddHandler(pluginwatcherapi.DevicePlugin, kl.containerManager.GetPluginRegistrationHandler())
+		// Start the plugin manager
+		klog.V(4).Infof("starting plugin manager")
+		go kl.pluginManager.Run(kl.sourcesReady, wait.NeverStop)
+	*/
 
 	err = kl.shutdownManager.Start()
 	if err != nil {
