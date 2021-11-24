@@ -23,7 +23,7 @@ import (
 	"regexp"
 	"testing"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -38,7 +38,6 @@ import (
 	controllervolumetesting "k8s.io/kubernetes/pkg/controller/volume/attachdetach/testing"
 	"k8s.io/kubernetes/pkg/features"
 	"k8s.io/kubernetes/pkg/volume"
-	"k8s.io/kubernetes/pkg/volume/awsebs"
 	"k8s.io/kubernetes/pkg/volume/csimigration"
 	"k8s.io/kubernetes/pkg/volume/util/operationexecutor"
 	volumetypes "k8s.io/kubernetes/pkg/volume/util/types"
@@ -103,7 +102,8 @@ func TestSyncHandler(t *testing.T) {
 			informerFactory.Core().V1().PersistentVolumeClaims().Informer().GetIndexer().Add(pvc)
 		}
 		allPlugins := []volume.VolumePlugin{}
-		allPlugins = append(allPlugins, awsebs.ProbeVolumePlugins()...)
+		// DELETED BY zhangjie
+		// allPlugins = append(allPlugins, awsebs.ProbeVolumePlugins()...)
 		translator := csitrans.New()
 		expc, err := NewExpandController(fakeKubeClient, pvcInformer, pvInformer, nil, allPlugins, translator, csimigration.NewPluginManager(translator), nil)
 		if err != nil {

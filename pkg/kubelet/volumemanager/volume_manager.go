@@ -34,7 +34,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
-	csitrans "k8s.io/csi-translation-lib"
 	"k8s.io/kubernetes/pkg/kubelet/config"
 	"k8s.io/kubernetes/pkg/kubelet/container"
 	"k8s.io/kubernetes/pkg/kubelet/pod"
@@ -45,7 +44,6 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/volumemanager/populator"
 	"k8s.io/kubernetes/pkg/kubelet/volumemanager/reconciler"
 	"k8s.io/kubernetes/pkg/volume"
-	"k8s.io/kubernetes/pkg/volume/csimigration"
 	"k8s.io/kubernetes/pkg/volume/util"
 	"k8s.io/kubernetes/pkg/volume/util/hostutil"
 	"k8s.io/kubernetes/pkg/volume/util/operationexecutor"
@@ -177,11 +175,12 @@ func NewVolumeManager(
 			blockVolumePathHandler)),
 	}
 
-	intreeToCSITranslator := csitrans.New()
-	csiMigratedPluginManager := csimigration.NewPluginManager(intreeToCSITranslator)
+	// DELETE BY zhangjie
+	// intreeToCSITranslator := csitrans.New()
+	// csiMigratedPluginManager := csimigration.NewPluginManager(intreeToCSITranslator)
 
-	vm.intreeToCSITranslator = intreeToCSITranslator
-	vm.csiMigratedPluginManager = csiMigratedPluginManager
+	// vm.intreeToCSITranslator = intreeToCSITranslator
+	// vm.csiMigratedPluginManager = csiMigratedPluginManager
 	vm.desiredStateOfWorldPopulator = populator.NewDesiredStateOfWorldPopulator(
 		kubeClient,
 		desiredStateOfWorldPopulatorLoopSleepPeriod,
@@ -192,8 +191,10 @@ func NewVolumeManager(
 		vm.actualStateOfWorld,
 		kubeContainerRuntime,
 		keepTerminatedPodVolumes,
-		csiMigratedPluginManager,
-		intreeToCSITranslator,
+		// DELETED BY zhangjie
+		// csiMigratedPluginManager,
+		// DELETED BY zhangjie
+		// intreeToCSITranslator,
 		volumePluginMgr)
 	vm.reconciler = reconciler.NewReconciler(
 		kubeClient,
@@ -250,11 +251,13 @@ type volumeManager struct {
 	// populate the desiredStateOfWorld using the kubelet PodManager.
 	desiredStateOfWorldPopulator populator.DesiredStateOfWorldPopulator
 
+	// DELETED BY zhangjie
 	// csiMigratedPluginManager keeps track of CSI migration status of plugins
-	csiMigratedPluginManager csimigration.PluginManager
+	// csiMigratedPluginManager csimigration.PluginManager
 
+	// DELETED BY zhangjie
 	// intreeToCSITranslator translates in-tree volume specs to CSI
-	intreeToCSITranslator csimigration.InTreeToCSITranslator
+	// intreeToCSITranslator csimigration.InTreeToCSITranslator
 }
 
 func (vm *volumeManager) Run(sourcesReady config.SourcesReady, stopCh <-chan struct{}) {
