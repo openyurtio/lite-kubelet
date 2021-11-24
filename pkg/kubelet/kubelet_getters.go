@@ -26,20 +26,17 @@ import (
 
 	cadvisorapiv1 "github.com/google/cadvisor/info/v1"
 	cadvisorv2 "github.com/google/cadvisor/info/v2"
-	"k8s.io/klog/v2"
-	"k8s.io/mount-utils"
-	utilpath "k8s.io/utils/path"
-	utilstrings "k8s.io/utils/strings"
-
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/kubelet/cm"
 	"k8s.io/kubernetes/pkg/kubelet/config"
 	kubecontainer "k8s.io/kubernetes/pkg/kubelet/container"
 	kubelettypes "k8s.io/kubernetes/pkg/kubelet/types"
 	utilnode "k8s.io/kubernetes/pkg/util/node"
-	"k8s.io/kubernetes/pkg/volume/csi"
+	"k8s.io/mount-utils"
+	utilpath "k8s.io/utils/path"
 )
 
 // getRootDir returns the full path to the directory under which kubelet can
@@ -324,23 +321,30 @@ func (kl *Kubelet) getPodVolumePathListFromDisk(podUID types.UID) ([]string, err
 		if err != nil {
 			return volumes, fmt.Errorf("could not read directory %s: %v", volumePluginPath, err)
 		}
-		unescapePluginName := utilstrings.UnescapeQualifiedName(volumePluginName)
 
-		if unescapePluginName != csi.CSIPluginName {
-			for _, volumeDir := range volumeDirs {
-				volumes = append(volumes, filepath.Join(volumePluginPath, volumeDir))
-			}
-		} else {
-			// For CSI volumes, the mounted volume path has an extra sub path "/mount", so also add it
-			// to the list if the mounted path exists.
-			for _, volumeDir := range volumeDirs {
-				path := filepath.Join(volumePluginPath, volumeDir)
-				csimountpath := csi.GetCSIMounterPath(path)
-				if pathExists, _ := mount.PathExists(csimountpath); pathExists {
-					volumes = append(volumes, csimountpath)
+		// ADDED BY zhangjie
+		for _, volumeDir := range volumeDirs {
+			volumes = append(volumes, filepath.Join(volumePluginPath, volumeDir))
+		}
+		// DELETED BY zhangjie
+		/*
+			unescapePluginName := utilstrings.UnescapeQualifiedName(volumePluginName)
+			if unescapePluginName != csi.CSIPluginName {
+				for _, volumeDir := range volumeDirs {
+					volumes = append(volumes, filepath.Join(volumePluginPath, volumeDir))
+				}
+			} else {
+				// For CSI volumes, the mounted volume path has an extra sub path "/mount", so also add it
+				// to the list if the mounted path exists.
+				for _, volumeDir := range volumeDirs {
+					path := filepath.Join(volumePluginPath, volumeDir)
+					csimountpath := csi.GetCSIMounterPath(path)
+					if pathExists, _ := mount.PathExists(csimountpath); pathExists {
+						volumes = append(volumes, csimountpath)
+					}
 				}
 			}
-		}
+		*/
 	}
 	return volumes, nil
 }

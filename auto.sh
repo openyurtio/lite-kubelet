@@ -9,6 +9,7 @@ LINUX_KUBELET_BIN=_output/local/bin/linux/amd64/kubelet
 
 function buildbin() {
 
+	echo "完整版kubelet 大小:119 M"
 	echo "原来的kubelet 大小:"
 	du -m ${LINUX_KUBELET_BIN}
 	rm -rf ${LINUX_KUBELET_BIN}
@@ -18,7 +19,6 @@ function buildbin() {
 
 	echo "现在的kubelet 大小:"
 	date 2>&1 | >> kubelet.txt
-	du -m ${LINUX_KUBELET_BIN} 2>&1 | tee  >> kubelet.txt
 	du -m ${LINUX_KUBELET_BIN}
 
 }
