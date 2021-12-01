@@ -56,6 +56,8 @@ const (
 	HTTPSource = "http"
 	// Updates from Kubernetes API Server
 	ApiserverSource = "api"
+	// Updates from a mqttfile
+	MqttFileSource = "mqttfile"
 	// Updates from all sources
 	AllSource = "*"
 
@@ -83,8 +85,8 @@ func GetValidatedSources(sources []string) ([]string, error) {
 	for _, source := range sources {
 		switch source {
 		case AllSource:
-			return []string{FileSource, HTTPSource, ApiserverSource}, nil
-		case FileSource, HTTPSource, ApiserverSource:
+			return []string{FileSource, HTTPSource, ApiserverSource, MqttFileSource}, nil
+		case FileSource, HTTPSource, ApiserverSource, MqttFileSource:
 			validated = append(validated, source)
 		case "":
 			// Skip
