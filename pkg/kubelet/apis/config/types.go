@@ -87,6 +87,11 @@ type KubeletConfiguration struct {
 	// staticPodPath is the path to the directory containing local (static) pods to
 	// run, or the path to a single static pod file.
 	StaticPodPath string
+
+	// MqttPodPath is the path to the directory containing (mqtt) pods to
+	// run, or the path to a single mqtt pod file.
+	MqttPodPath string
+
 	// syncFrequency is the max period between synchronizing running
 	// containers and config
 	SyncFrequency metav1.Duration
