@@ -150,7 +150,7 @@ func (mc *basicMirrorClient) getNodeUID() (types.UID, error) {
 // IsStaticPod returns true if the passed Pod is static.
 func IsStaticPod(pod *v1.Pod) bool {
 	source, err := kubetypes.GetPodSource(pod)
-	return err == nil && source != kubetypes.ApiserverSource
+	return err == nil && source != kubetypes.ApiserverSource && source != kubetypes.MqttFileSource
 }
 
 func getHashFromMirrorPod(pod *v1.Pod) (string, bool) {

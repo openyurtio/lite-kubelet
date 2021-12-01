@@ -146,7 +146,7 @@ func IsMirrorPod(pod *v1.Pod) bool {
 // IsStaticPod returns true if the pod is a static pod.
 func IsStaticPod(pod *v1.Pod) bool {
 	source, err := GetPodSource(pod)
-	return err == nil && source != ApiserverSource
+	return err == nil && source != ApiserverSource && source != MqttFileSource
 }
 
 // IsCriticalPod returns true if pod's priority is greater than or equal to SystemCriticalPriority.

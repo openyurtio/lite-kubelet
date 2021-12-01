@@ -262,6 +262,11 @@ func makePodSourceConfig(kubeCfg *kubeletconfiginternal.KubeletConfiguration, ku
 		config.NewSourceFile(kubeCfg.StaticPodPath, nodeName, kubeCfg.FileCheckFrequency.Duration, cfg.Channel(kubetypes.FileSource), kubetypes.FileSource)
 	}
 
+	if kubeCfg.MqttPodPath != "" {
+		klog.Infof("Adding pod mqtt path: %v", kubeCfg.MqttPodPath)
+		config.NewSourceFile(kubeCfg.MqttPodPath, nodeName, kubeCfg.FileCheckFrequency.Duration, cfg.Channel(kubetypes.MqttFileSource), kubetypes.MqttFileSource)
+	}
+
 	// define url config source
 	// DELETED BY zhangjie
 	/*
