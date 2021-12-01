@@ -263,15 +263,17 @@ func makePodSourceConfig(kubeCfg *kubeletconfiginternal.KubeletConfiguration, ku
 	}
 
 	// define url config source
-	if kubeCfg.StaticPodURL != "" {
-		klog.Infof("Adding pod url %q with HTTP header %v", kubeCfg.StaticPodURL, manifestURLHeader)
-		config.NewSourceURL(kubeCfg.StaticPodURL, manifestURLHeader, nodeName, kubeCfg.HTTPCheckFrequency.Duration, cfg.Channel(kubetypes.HTTPSource))
-	}
-
-	if kubeDeps.KubeClient != nil {
-		klog.Infof("Watching apiserver")
-		config.NewSourceApiserver(kubeDeps.KubeClient, nodeName, cfg.Channel(kubetypes.ApiserverSource))
-	}
+	// DELETED BY zhangjie
+	/*
+		if kubeCfg.StaticPodURL != "" {
+			klog.Infof("Adding pod url %q with HTTP header %v", kubeCfg.StaticPodURL, manifestURLHeader)
+			config.NewSourceURL(kubeCfg.StaticPodURL, manifestURLHeader, nodeName, kubeCfg.HTTPCheckFrequency.Duration, cfg.Channel(kubetypes.HTTPSource))
+		}
+		if kubeDeps.KubeClient != nil {
+			klog.Infof("Watching apiserver")
+			config.NewSourceApiserver(kubeDeps.KubeClient, nodeName, cfg.Channel(kubetypes.ApiserverSource))
+		}
+	*/
 	return cfg, nil
 }
 
