@@ -612,9 +612,12 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	klet.dockerLegacyService = kubeDeps.dockerLegacyService
 	klet.runtimeService = kubeDeps.RemoteRuntimeService
 
-	if kubeDeps.KubeClient != nil {
-		klet.runtimeClassManager = runtimeclass.NewManager(kubeDeps.KubeClient)
-	}
+	// DELETED BY zhangjie
+	/*
+		if kubeDeps.KubeClient != nil {
+			klet.runtimeClassManager = runtimeclass.NewManager(kubeDeps.KubeClient)
+		}
+	*/
 
 	if containerRuntime == kubetypes.RemoteContainerRuntime && utilfeature.DefaultFeatureGate.Enabled(features.CRIContainerLogRotation) {
 		// setup containerLogManager for CRI container runtime
@@ -1477,9 +1480,12 @@ func (kl *Kubelet) Run(updates <-chan kubetypes.PodUpdate) {
 	// kl.probeManager.Start()
 
 	// Start syncing RuntimeClasses if enabled.
-	if kl.runtimeClassManager != nil {
-		kl.runtimeClassManager.Start(wait.NeverStop)
-	}
+	// DELETED BY zhangjie
+	/*
+		if kl.runtimeClassManager != nil {
+			kl.runtimeClassManager.Start(wait.NeverStop)
+		}
+	*/
 
 	// Start the pod lifecycle event generator.
 	kl.pleg.Start()
@@ -2107,8 +2113,11 @@ func (kl *Kubelet) HandlePodAdditions(pods []*v1.Pod) {
 		kl.podManager.AddPod(pod)
 
 		if kubetypes.IsMirrorPod(pod) {
+			klog.V(4).Infof("pod [%s][%s] is mirrorPod", pod.GetNamespace(), pod.GetName())
 			kl.handleMirrorPod(pod, start)
 			continue
+		} else {
+			klog.V(4).Infof("pod [%s][%s] is not mirrorPod", pod.GetNamespace(), pod.GetName())
 		}
 
 		if !kl.podIsTerminated(pod) {
@@ -2126,6 +2135,11 @@ func (kl *Kubelet) HandlePodAdditions(pods []*v1.Pod) {
 			}
 		}
 		mirrorPod, _ := kl.podManager.GetMirrorPodByPod(pod)
+		if mirrorPod != nil {
+			klog.V(4).Infof("mirror pod [%s][%s]", mirrorPod.GetNamespace(), mirrorPod.GetName())
+		} else {
+			klog.V(4).Infof("pod [%s][%s] can not get mirror pod", pod.GetNamespace(), pod.GetName())
+		}
 		kl.dispatchWork(pod, kubetypes.SyncPodCreate, mirrorPod, start)
 		// DLETE BY zhangjie
 		// kl.probeManager.AddPod(pod)
