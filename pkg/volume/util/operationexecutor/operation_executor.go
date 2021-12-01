@@ -35,7 +35,6 @@ import (
 	"k8s.io/kubernetes/pkg/volume/util/hostutil"
 	"k8s.io/kubernetes/pkg/volume/util/nestedpendingoperations"
 	volumetypes "k8s.io/kubernetes/pkg/volume/util/types"
-	"k8s.io/kubernetes/pkg/volume/util/volumepathhandler"
 )
 
 // OperationExecutor defines a set of operations for attaching, detaching,
@@ -945,20 +944,26 @@ func (oe *operationExecutor) ReconstructVolumeOperation(
 			return nil, err
 		}
 		return volumeSpec, nil
+	} else {
+		klog.Warningf("Volume mode only support %v , now is %v", v1.PersistentVolumeFilesystem, volumeMode)
+		return nil, fmt.Errorf("Volume mode only support %v , now is %v", v1.PersistentVolumeFilesystem, volumeMode)
 	}
 
-	// Block Volume case
-	// Create volumeSpec from mount path
-	klog.V(5).Infof("Starting operationExecutor.ReconstructVolume")
+	// DELETED BY zhangjie
+	/*
+		// Block Volume case
+		// Create volumeSpec from mount path
+		klog.V(5).Infof("Starting operationExecutor.ReconstructVolume")
 
-	// volumePath contains volumeName on the path. In the case of block volume, {volumeName} is symbolic link
-	// corresponding to raw block device.
-	// ex. volumePath: pods/{podUid}}/{DefaultKubeletVolumeDevicesDirName}/{escapeQualifiedPluginName}/{volumeName}
-	volumeSpec, err := mapperPlugin.ConstructBlockVolumeSpec(uid, volumeSpecName, volumePath)
-	if err != nil {
-		return nil, err
-	}
-	return volumeSpec, nil
+		// volumePath contains volumeName on the path. In the case of block volume, {volumeName} is symbolic link
+		// corresponding to raw block device.
+		// ex. volumePath: pods/{podUid}}/{DefaultKubeletVolumeDevicesDirName}/{escapeQualifiedPluginName}/{volumeName}
+		volumeSpec, err := mapperPlugin.ConstructBlockVolumeSpec(uid, volumeSpecName, volumePath)
+		if err != nil {
+			return nil, err
+		}
+		return volumeSpec, nil
+	*/
 }
 
 // CheckVolumeExistenceOperation checks mount path directory if volume still exists
@@ -979,42 +984,51 @@ func (oe *operationExecutor) CheckVolumeExistenceOperation(
 	// For attachable volume case, check mount path directory if volume is still existing and mounted.
 	// Return true if volume is mounted.
 	if fsVolume {
-		if attachable != nil {
-			var isNotMount bool
-			var mountCheckErr error
-			if mounter == nil {
-				return false, fmt.Errorf("mounter was not set for a filesystem volume")
+		/*
+			if attachable != nil {
+				var isNotMount bool
+				var mountCheckErr error
+				if mounter == nil {
+					return false, fmt.Errorf("mounter was not set for a filesystem volume")
+				}
+				if isNotMount, mountCheckErr = mounter.IsLikelyNotMountPoint(mountPath); mountCheckErr != nil {
+					return false, fmt.Errorf("could not check whether the volume %q (spec.Name: %q) pod %q (UID: %q) is mounted with: %v",
+						uniqueVolumeName,
+						volumeName,
+						podName,
+						podUID,
+						mountCheckErr)
+				}
+				return !isNotMount, nil
 			}
-			if isNotMount, mountCheckErr = mounter.IsLikelyNotMountPoint(mountPath); mountCheckErr != nil {
-				return false, fmt.Errorf("could not check whether the volume %q (spec.Name: %q) pod %q (UID: %q) is mounted with: %v",
-					uniqueVolumeName,
-					volumeName,
-					podName,
-					podUID,
-					mountCheckErr)
-			}
-			return !isNotMount, nil
-		}
+
+		*/
 		// For non-attachable volume case, skip check and return true without mount point check
 		// since plugins may not have volume mount point.
 		return true, nil
+	} else {
+		klog.Errorf("volumespec only support fs system")
+		return false, fmt.Errorf("volumespec only support fs system ")
 	}
 
+	// DELETED BY zhangjie
 	// Block Volume case
 	// Check mount path directory if volume still exists, then return true if volume
 	// is there. Either plugin is attachable or non-attachable, the plugin should
 	// have symbolic link associated to raw block device under pod device map
 	// if volume exists.
-	blkutil := volumepathhandler.NewBlockVolumePathHandler()
-	var islinkExist bool
-	var checkErr error
-	if islinkExist, checkErr = blkutil.IsSymlinkExist(mountPath); checkErr != nil {
-		return false, fmt.Errorf("could not check whether the block volume %q (spec.Name: %q) pod %q (UID: %q) is mapped to: %v",
-			uniqueVolumeName,
-			volumeName,
-			podName,
-			podUID,
-			checkErr)
-	}
-	return islinkExist, nil
+	/*
+		blkutil := volumepathhandler.NewBlockVolumePathHandler()
+		var islinkExist bool
+		var checkErr error
+		if islinkExist, checkErr = blkutil.IsSymlinkExist(mountPath); checkErr != nil {
+			return false, fmt.Errorf("could not check whether the block volume %q (spec.Name: %q) pod %q (UID: %q) is mapped to: %v",
+				uniqueVolumeName,
+				volumeName,
+				podName,
+				podUID,
+				checkErr)
+		}
+		return islinkExist, nil
+	*/
 }

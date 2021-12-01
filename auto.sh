@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+#set -e
 
 BINARY=$0
 SUB_CMD=$1

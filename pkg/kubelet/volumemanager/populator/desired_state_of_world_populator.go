@@ -198,25 +198,30 @@ func (dswp *desiredStateOfWorldPopulator) isPodTerminated(pod *v1.Pod) bool {
 // exist but should
 func (dswp *desiredStateOfWorldPopulator) findAndAddNewPods() {
 	// Map unique pod name to outer volume name to MountedVolume.
-	mountedVolumesForPod := make(map[volumetypes.UniquePodName]map[string]cache.MountedVolume)
-	if utilfeature.DefaultFeatureGate.Enabled(features.ExpandInUsePersistentVolumes) {
-		for _, mountedVolume := range dswp.actualStateOfWorld.GetMountedVolumes() {
-			mountedVolumes, exist := mountedVolumesForPod[mountedVolume.PodName]
-			if !exist {
-				mountedVolumes = make(map[string]cache.MountedVolume)
-				mountedVolumesForPod[mountedVolume.PodName] = mountedVolumes
+	// DELETED BY zhangjie
+	/*
+		mountedVolumesForPod := make(map[volumetypes.UniquePodName]map[string]cache.MountedVolume)
+			if utilfeature.DefaultFeatureGate.Enabled(features.ExpandInUsePersistentVolumes) {
+				for _, mountedVolume := range dswp.actualStateOfWorld.GetMountedVolumes() {
+					mountedVolumes, exist := mountedVolumesForPod[mountedVolume.PodName]
+					if !exist {
+						mountedVolumes = make(map[string]cache.MountedVolume)
+						mountedVolumesForPod[mountedVolume.PodName] = mountedVolumes
+					}
+					mountedVolumes[mountedVolume.OuterVolumeSpecName] = mountedVolume
+				}
 			}
-			mountedVolumes[mountedVolume.OuterVolumeSpecName] = mountedVolume
-		}
-	}
 
-	processedVolumesForFSResize := sets.NewString()
+		processedVolumesForFSResize := sets.NewString()
+	*/
 	for _, pod := range dswp.podManager.GetPods() {
 		if dswp.isPodTerminated(pod) {
 			// Do not (re)add volumes for terminated pods
 			continue
 		}
-		dswp.processPodVolumes(pod, mountedVolumesForPod, processedVolumesForFSResize)
+		// CHANGED BY zhangjie , delete mountedVolumesForPod and processedVolumesForFSResize  param
+		dswp.processPodVolumes(pod)
+		//dswp.processPodVolumes(pod, mountedVolumesForPod, processedVolumesForFSResize)
 	}
 }
 
@@ -231,17 +236,20 @@ func (dswp *desiredStateOfWorldPopulator) findAndRemoveDeletedPods() {
 		if podExists {
 
 			// check if the attachability has changed for this volume
-			if volumeToMount.PluginIsAttachable {
-				attachableVolumePlugin, err := dswp.volumePluginMgr.FindAttachablePluginBySpec(volumeToMount.VolumeSpec)
-				// only this means the plugin is truly non-attachable
-				if err == nil && attachableVolumePlugin == nil {
-					// It is not possible right now for a CSI plugin to be both attachable and non-deviceMountable
-					// So the uniqueVolumeName should remain the same after the attachability change
-					dswp.desiredStateOfWorld.MarkVolumeAttachability(volumeToMount.VolumeName, false)
-					klog.Infof("Volume %v changes from attachable to non-attachable.", volumeToMount.VolumeName)
-					continue
+			// DELETED BY zhangjie, volumeToMount is not attachable
+			/*
+				if volumeToMount.PluginIsAttachable {
+					attachableVolumePlugin, err := dswp.volumePluginMgr.FindAttachablePluginBySpec(volumeToMount.VolumeSpec)
+					// only this means the plugin is truly non-attachable
+					if err == nil && attachableVolumePlugin == nil {
+						// It is not possible right now for a CSI plugin to be both attachable and non-deviceMountable
+						// So the uniqueVolumeName should remain the same after the attachability change
+						dswp.desiredStateOfWorld.MarkVolumeAttachability(volumeToMount.VolumeName, false)
+						klog.Infof("Volume %v changes from attachable to non-attachable.", volumeToMount.VolumeName)
+						continue
+					}
 				}
-			}
+			*/
 
 			// Skip running pods
 			if !dswp.isPodTerminated(pod) {
@@ -311,10 +319,8 @@ func (dswp *desiredStateOfWorldPopulator) findAndRemoveDeletedPods() {
 
 // processPodVolumes processes the volumes in the given pod and adds them to the
 // desired state of the world.
-func (dswp *desiredStateOfWorldPopulator) processPodVolumes(
-	pod *v1.Pod,
-	mountedVolumesForPod map[volumetypes.UniquePodName]map[string]cache.MountedVolume,
-	processedVolumesForFSResize sets.String) {
+// CHANGED BY zhangjie， delete mountedVolumesForPod map[volumetypes.UniquePodName]map[string]cache.MountedVolume and  processedVolumesForFSResize sets.String param
+func (dswp *desiredStateOfWorldPopulator) processPodVolumes(pod *v1.Pod) {
 	if pod == nil {
 		return
 	}
@@ -327,7 +333,8 @@ func (dswp *desiredStateOfWorldPopulator) processPodVolumes(
 	allVolumesAdded := true
 	mounts, devices := util.GetPodVolumeNames(pod)
 
-	expandInUsePV := utilfeature.DefaultFeatureGate.Enabled(features.ExpandInUsePersistentVolumes)
+	// DELETED BY zhangjie
+	// expandInUsePV := utilfeature.DefaultFeatureGate.Enabled(features.ExpandInUsePersistentVolumes)
 	// Process volume spec for each volume defined in pod
 	for _, podVolume := range pod.Spec.Volumes {
 		if !mounts.Has(podVolume.Name) && !devices.Has(podVolume.Name) {
@@ -336,7 +343,9 @@ func (dswp *desiredStateOfWorldPopulator) processPodVolumes(
 			continue
 		}
 
-		pvc, volumeSpec, volumeGidValue, err :=
+		// CHANGED BY zhangjie
+		_, volumeSpec, volumeGidValue, err :=
+			//pvc, volumeSpec, volumeGidValue, err :=
 			dswp.createVolumeSpec(podVolume, pod, mounts, devices)
 		if err != nil {
 			klog.Errorf(
@@ -369,10 +378,13 @@ func (dswp *desiredStateOfWorldPopulator) processPodVolumes(
 				uniquePodName)
 		}
 
-		if expandInUsePV {
-			dswp.checkVolumeFSResize(pod, podVolume, pvc, volumeSpec,
-				uniquePodName, mountedVolumesForPod, processedVolumesForFSResize)
-		}
+		// DELETED BY zhangjie
+		/*
+			if expandInUsePV {
+				dswp.checkVolumeFSResize(pod, podVolume, pvc, volumeSpec,
+					uniquePodName, mountedVolumesForPod, processedVolumesForFSResize)
+			}
+		*/
 	}
 
 	// some of the volume additions may have failed, should not mark this pod as fully processed
@@ -513,112 +525,118 @@ func (dswp *desiredStateOfWorldPopulator) deleteProcessedPod(
 // Returns an error if unable to obtain the volume at this time.
 func (dswp *desiredStateOfWorldPopulator) createVolumeSpec(
 	podVolume v1.Volume, pod *v1.Pod, mounts, devices sets.String) (*v1.PersistentVolumeClaim, *volume.Spec, string, error) {
-	pvcSource := podVolume.VolumeSource.PersistentVolumeClaim
-	ephemeral := false
-	if pvcSource == nil &&
-		podVolume.VolumeSource.Ephemeral != nil &&
-		utilfeature.DefaultFeatureGate.Enabled(features.GenericEphemeralVolume) {
-		// Generic ephemeral inline volumes are handled the
-		// same way as a PVC reference. The only additional
-		// constraint (checked below) is that the PVC must be
-		// owned by the pod.
-		pvcSource = &v1.PersistentVolumeClaimVolumeSource{
-			ClaimName: pod.Name + "-" + podVolume.Name,
-			ReadOnly:  podVolume.VolumeSource.Ephemeral.ReadOnly,
-		}
-		ephemeral = true
-	}
-	if pvcSource != nil {
-		klog.V(5).Infof(
-			"Found PVC, ClaimName: %q/%q",
-			pod.Namespace,
-			pvcSource.ClaimName)
+	// DELETED BY zhangjie , Ephemeral is useless
+	/*
+		pvcSource := podVolume.VolumeSource.PersistentVolumeClaim
+		ephemeral := false
 
-		// If podVolume is a PVC, fetch the real PV behind the claim
-		pvc, err := dswp.getPVCExtractPV(
-			pod.Namespace, pvcSource.ClaimName)
-		if err != nil {
-			return nil, nil, "", fmt.Errorf(
-				"error processing PVC %s/%s: %v",
+		if pvcSource == nil &&
+			podVolume.VolumeSource.Ephemeral != nil &&
+			utilfeature.DefaultFeatureGate.Enabled(features.GenericEphemeralVolume) {
+			// Generic ephemeral inline volumes are handled the
+			// same way as a PVC reference. The only additional
+			// constraint (checked below) is that the PVC must be
+			// owned by the pod.
+			pvcSource = &v1.PersistentVolumeClaimVolumeSource{
+				ClaimName: pod.Name + "-" + podVolume.Name,
+				ReadOnly:  podVolume.VolumeSource.Ephemeral.ReadOnly,
+			}
+			ephemeral = true
+		}
+	*/
+	// DELETED BY zhangjie
+	// PVC is useless
+	/*
+		if pvcSource != nil {
+			klog.V(5).Infof(
+				"Found PVC, ClaimName: %q/%q",
 				pod.Namespace,
-				pvcSource.ClaimName,
-				err)
-		}
-		if ephemeral && !metav1.IsControlledBy(pvc, pod) {
-			return nil, nil, "", fmt.Errorf(
-				"error processing PVC %s/%s: not the ephemeral PVC for the pod",
-				pod.Namespace,
-				pvcSource.ClaimName,
-			)
-		}
-		pvName, pvcUID := pvc.Spec.VolumeName, pvc.UID
+				pvcSource.ClaimName)
 
-		klog.V(5).Infof(
-			"Found bound PV for PVC (ClaimName %q/%q pvcUID %v): pvName=%q",
-			pod.Namespace,
-			pvcSource.ClaimName,
-			pvcUID,
-			pvName)
-
-		// Fetch actual PV object
-		volumeSpec, volumeGidValue, err :=
-			dswp.getPVSpec(pvName, pvcSource.ReadOnly, pvcUID)
-		if err != nil {
-			return nil, nil, "", fmt.Errorf(
-				"error processing PVC %s/%s: %v",
-				pod.Namespace,
-				pvcSource.ClaimName,
-				err)
-		}
-
-		klog.V(5).Infof(
-			"Extracted volumeSpec (%v) from bound PV (pvName %q) and PVC (ClaimName %q/%q pvcUID %v)",
-			volumeSpec.Name(),
-			pvName,
-			pod.Namespace,
-			pvcSource.ClaimName,
-			pvcUID)
-
-		// DELETED BY zhangjie
-		/*
-			migratable, err := dswp.csiMigratedPluginManager.IsMigratable(volumeSpec)
+			// If podVolume is a PVC, fetch the real PV behind the claim
+			pvc, err := dswp.getPVCExtractPV(
+				pod.Namespace, pvcSource.ClaimName)
 			if err != nil {
-				return nil, nil, "", err
+				return nil, nil, "", fmt.Errorf(
+					"error processing PVC %s/%s: %v",
+					pod.Namespace,
+					pvcSource.ClaimName,
+					err)
 			}
-			if migratable {
-				volumeSpec, err = csimigration.TranslateInTreeSpecToCSI(volumeSpec, dswp.intreeToCSITranslator)
-				if err != nil {
-					return nil, nil, "", err
-				}
+			if ephemeral && !metav1.IsControlledBy(pvc, pod) {
+				return nil, nil, "", fmt.Errorf(
+					"error processing PVC %s/%s: not the ephemeral PVC for the pod",
+					pod.Namespace,
+					pvcSource.ClaimName,
+				)
 			}
-		*/
+			pvName, pvcUID := pvc.Spec.VolumeName, pvc.UID
 
-		// TODO: replace this with util.GetVolumeMode() when features.BlockVolume is removed.
-		// The function will return the right value then.
-		volumeMode := v1.PersistentVolumeFilesystem
-		if volumeSpec.PersistentVolume != nil && volumeSpec.PersistentVolume.Spec.VolumeMode != nil {
-			volumeMode = *volumeSpec.PersistentVolume.Spec.VolumeMode
-		}
+			klog.V(5).Infof(
+				"Found bound PV for PVC (ClaimName %q/%q pvcUID %v): pvName=%q",
+				pod.Namespace,
+				pvcSource.ClaimName,
+				pvcUID,
+				pvName)
 
-		// TODO: remove features.BlockVolume checks / comments after no longer needed
-		// Error if a container has volumeMounts but the volumeMode of PVC isn't Filesystem.
-		// Do not check feature gate here to make sure even when the feature is disabled in kubelet,
-		// because controller-manager / API server can already contain block PVs / PVCs.
-		if mounts.Has(podVolume.Name) && volumeMode != v1.PersistentVolumeFilesystem {
-			return nil, nil, "", fmt.Errorf(
-				"volume %s has volumeMode %s, but is specified in volumeMounts",
-				podVolume.Name,
-				volumeMode)
+			// Fetch actual PV object
+			volumeSpec, volumeGidValue, err :=
+				dswp.getPVSpec(pvName, pvcSource.ReadOnly, pvcUID)
+			if err != nil {
+				return nil, nil, "", fmt.Errorf(
+					"error processing PVC %s/%s: %v",
+					pod.Namespace,
+					pvcSource.ClaimName,
+					err)
+			}
+
+			klog.V(5).Infof(
+				"Extracted volumeSpec (%v) from bound PV (pvName %q) and PVC (ClaimName %q/%q pvcUID %v)",
+				volumeSpec.Name(),
+				pvName,
+				pod.Namespace,
+				pvcSource.ClaimName,
+				pvcUID)
+
+			// DELETED BY zhangjie
+			//	migratable, err := dswp.csiMigratedPluginManager.IsMigratable(volumeSpec)
+			//	if err != nil {
+			//		return nil, nil, "", err
+			//	}
+			//	if migratable {
+			//		volumeSpec, err = csimigration.TranslateInTreeSpecToCSI(volumeSpec, dswp.intreeToCSITranslator)
+			//		if err != nil {
+			//			return nil, nil, "", err
+			//		}
+			//	}
+
+			// TODO: replace this with util.GetVolumeMode() when features.BlockVolume is removed.
+			// The function will return the right value then.
+			volumeMode := v1.PersistentVolumeFilesystem
+			if volumeSpec.PersistentVolume != nil && volumeSpec.PersistentVolume.Spec.VolumeMode != nil {
+				volumeMode = *volumeSpec.PersistentVolume.Spec.VolumeMode
+			}
+
+			// TODO: remove features.BlockVolume checks / comments after no longer needed
+			// Error if a container has volumeMounts but the volumeMode of PVC isn't Filesystem.
+			// Do not check feature gate here to make sure even when the feature is disabled in kubelet,
+			// because controller-manager / API server can already contain block PVs / PVCs.
+			if mounts.Has(podVolume.Name) && volumeMode != v1.PersistentVolumeFilesystem {
+				return nil, nil, "", fmt.Errorf(
+					"volume %s has volumeMode %s, but is specified in volumeMounts",
+					podVolume.Name,
+					volumeMode)
+			}
+			// Error if a container has volumeDevices but the volumeMode of PVC isn't Block
+			if devices.Has(podVolume.Name) && volumeMode != v1.PersistentVolumeBlock {
+				return nil, nil, "", fmt.Errorf(
+					"volume %s has volumeMode %s, but is specified in volumeDevices",
+					podVolume.Name,
+					volumeMode)
+			}
+			return pvc, volumeSpec, volumeGidValue, nil
 		}
-		// Error if a container has volumeDevices but the volumeMode of PVC isn't Block
-		if devices.Has(podVolume.Name) && volumeMode != v1.PersistentVolumeBlock {
-			return nil, nil, "", fmt.Errorf(
-				"volume %s has volumeMode %s, but is specified in volumeDevices",
-				podVolume.Name,
-				volumeMode)
-		}
-		return pvc, volumeSpec, volumeGidValue, nil
-	}
+	*/
 
 	// Do not return the original volume object, since the source could mutate it
 	clonedPodVolume := podVolume.DeepCopy()

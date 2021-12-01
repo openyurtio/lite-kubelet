@@ -25,7 +25,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
 	"time"
 
 	"k8s.io/klog/v2"
@@ -468,14 +467,17 @@ func (rc *reconciler) reconstructVolume(volume podVolume) (*reconstructedVolume,
 	if err != nil {
 		return nil, err
 	}
-	attachablePlugin, err := rc.volumePluginMgr.FindAttachablePluginByName(volume.pluginName)
-	if err != nil {
-		return nil, err
-	}
-	deviceMountablePlugin, err := rc.volumePluginMgr.FindDeviceMountablePluginByName(volume.pluginName)
-	if err != nil {
-		return nil, err
-	}
+	// DELETED BY zhangjie
+	/*
+		attachablePlugin, err := rc.volumePluginMgr.FindAttachablePluginByName(volume.pluginName)
+		if err != nil {
+			return nil, err
+		}
+		deviceMountablePlugin, err := rc.volumePluginMgr.FindDeviceMountablePluginByName(volume.pluginName)
+		if err != nil {
+			return nil, err
+		}
+	*/
 
 	// Create pod object
 	pod := &v1.Pod{
@@ -483,18 +485,23 @@ func (rc *reconciler) reconstructVolume(volume podVolume) (*reconstructedVolume,
 			UID: types.UID(volume.podName),
 		},
 	}
-	mapperPlugin, err := rc.volumePluginMgr.FindMapperPluginByName(volume.pluginName)
-	if err != nil {
-		return nil, err
-	}
-	if volume.volumeMode == v1.PersistentVolumeBlock && mapperPlugin == nil {
-		return nil, fmt.Errorf("could not find block volume plugin %q (spec.Name: %q) pod %q (UID: %q)", volume.pluginName, volume.volumeSpecName, volume.podName, pod.UID)
-	}
+	// DELETED BY zhangjie
+	/*
+		mapperPlugin, err := rc.volumePluginMgr.FindMapperPluginByName(volume.pluginName)
+		if err != nil {
+			return nil, err
+		}
+		if volume.volumeMode == v1.PersistentVolumeBlock && mapperPlugin == nil {
+			return nil, fmt.Errorf("could not find block volume plugin %q (spec.Name: %q) pod %q (UID: %q)", volume.pluginName, volume.volumeSpecName, volume.podName, pod.UID)
+		}
+	*/
 
 	volumeSpec, err := rc.operationExecutor.ReconstructVolumeOperation(
 		volume.volumeMode,
 		plugin,
-		mapperPlugin,
+		// CHANGED BY zhangjie
+		nil,
+		//mapperPlugin,
 		pod.UID,
 		volume.podName,
 		volume.volumeSpecName,
@@ -505,14 +512,19 @@ func (rc *reconciler) reconstructVolume(volume podVolume) (*reconstructedVolume,
 	}
 
 	var uniqueVolumeName v1.UniqueVolumeName
-	if attachablePlugin != nil || deviceMountablePlugin != nil {
-		uniqueVolumeName, err = util.GetUniqueVolumeNameFromSpec(plugin, volumeSpec)
-		if err != nil {
-			return nil, err
+	// DELETED BY zhangjie
+	/*
+		if attachablePlugin != nil || deviceMountablePlugin != nil {
+			uniqueVolumeName, err = util.GetUniqueVolumeNameFromSpec(plugin, volumeSpec)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			uniqueVolumeName = util.GetUniqueVolumeNameFromSpecWithPod(volume.podName, plugin, volumeSpec)
 		}
-	} else {
-		uniqueVolumeName = util.GetUniqueVolumeNameFromSpecWithPod(volume.podName, plugin, volumeSpec)
-	}
+	*/
+	// ADDED BY zhangjie
+	uniqueVolumeName = util.GetUniqueVolumeNameFromSpecWithPod(volume.podName, plugin, volumeSpec)
 
 	var volumeMapper volumepkg.BlockVolumeMapper
 	var volumeMounter volumepkg.Mounter
@@ -521,22 +533,26 @@ func (rc *reconciler) reconstructVolume(volume podVolume) (*reconstructedVolume,
 	var checkPath string
 
 	if volume.volumeMode == v1.PersistentVolumeBlock {
-		var newMapperErr error
-		volumeMapper, newMapperErr = mapperPlugin.NewBlockVolumeMapper(
-			volumeSpec,
-			pod,
-			volumepkg.VolumeOptions{})
-		if newMapperErr != nil {
-			return nil, fmt.Errorf(
-				"reconstructVolume.NewBlockVolumeMapper failed for volume %q (spec.Name: %q) pod %q (UID: %q) with: %v",
-				uniqueVolumeName,
-				volumeSpec.Name(),
-				volume.podName,
-				pod.UID,
-				newMapperErr)
-		}
-		mapDir, linkName := volumeMapper.GetPodDeviceMapPath()
-		checkPath = filepath.Join(mapDir, linkName)
+		klog.Warningf("volume mode dose not support %v", volume.volumeMode)
+		// DELETE BY zhangjie
+		/*
+			var newMapperErr error
+			volumeMapper, newMapperErr = mapperPlugin.NewBlockVolumeMapper(
+				volumeSpec,
+				pod,
+				volumepkg.VolumeOptions{})
+			if newMapperErr != nil {
+				return nil, fmt.Errorf(
+					"reconstructVolume.NewBlockVolumeMapper failed for volume %q (spec.Name: %q) pod %q (UID: %q) with: %v",
+					uniqueVolumeName,
+					volumeSpec.Name(),
+					volume.podName,
+					pod.UID,
+					newMapperErr)
+			}
+			mapDir, linkName := volumeMapper.GetPodDeviceMapPath()
+			checkPath = filepath.Join(mapDir, linkName)
+		*/
 	} else {
 		var err error
 		volumeMounter, err = plugin.NewMounter(
@@ -553,21 +569,26 @@ func (rc *reconciler) reconstructVolume(volume podVolume) (*reconstructedVolume,
 				err)
 		}
 		checkPath = volumeMounter.GetPath()
-		if deviceMountablePlugin != nil {
-			deviceMounter, err = deviceMountablePlugin.NewDeviceMounter()
-			if err != nil {
-				return nil, fmt.Errorf("reconstructVolume.NewDeviceMounter failed for volume %q (spec.Name: %q) pod %q (UID: %q) with: %v",
-					uniqueVolumeName,
-					volumeSpec.Name(),
-					volume.podName,
-					pod.UID,
-					err)
+		// DELETED BY zhangjie
+		/*
+			if deviceMountablePlugin != nil {
+				deviceMounter, err = deviceMountablePlugin.NewDeviceMounter()
+				if err != nil {
+					return nil, fmt.Errorf("reconstructVolume.NewDeviceMounter failed for volume %q (spec.Name: %q) pod %q (UID: %q) with: %v",
+						uniqueVolumeName,
+						volumeSpec.Name(),
+						volume.podName,
+						pod.UID,
+						err)
+				}
 			}
-		}
+		*/
 	}
 
 	// Check existence of mount point for filesystem volume or symbolic link for block volume
-	isExist, checkErr := rc.operationExecutor.CheckVolumeExistenceOperation(volumeSpec, checkPath, volumeSpec.Name(), rc.mounter, uniqueVolumeName, volume.podName, pod.UID, attachablePlugin)
+	// CHANGED BY zhangjie attachablePlugin to nil
+	isExist, checkErr := rc.operationExecutor.CheckVolumeExistenceOperation(volumeSpec, checkPath, volumeSpec.Name(), rc.mounter, uniqueVolumeName, volume.podName, pod.UID, nil)
+	//isExist, checkErr := rc.operationExecutor.CheckVolumeExistenceOperation(volumeSpec, checkPath, volumeSpec.Name(), rc.mounter, uniqueVolumeName, volume.podName, pod.UID, attachablePlugin)
 	if checkErr != nil {
 		return nil, checkErr
 	}

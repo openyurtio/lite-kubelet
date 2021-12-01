@@ -236,25 +236,31 @@ func (dsw *desiredStateOfWorld) AddPodToVolume(
 
 	// The unique volume name used depends on whether the volume is attachable/device-mountable
 	// or not.
-	attachable := util.IsAttachableVolume(volumeSpec, dsw.volumePluginMgr)
-	deviceMountable := util.IsDeviceMountableVolume(volumeSpec, dsw.volumePluginMgr)
-	if attachable || deviceMountable {
-		// For attachable/device-mountable volumes, use the unique volume name as reported by
-		// the plugin.
-		volumeName, err =
-			util.GetUniqueVolumeNameFromSpec(volumePlugin, volumeSpec)
-		if err != nil {
-			return "", fmt.Errorf(
-				"failed to GetUniqueVolumeNameFromSpec for volumeSpec %q using volume plugin %q err=%v",
-				volumeSpec.Name(),
-				volumePlugin.GetPluginName(),
-				err)
+	// DELETED BY zhangjie, attachable and deviceMountable is nil
+	/*
+		attachable := util.IsAttachableVolume(volumeSpec, dsw.volumePluginMgr)
+		deviceMountable := util.IsDeviceMountableVolume(volumeSpec, dsw.volumePluginMgr)
+		if attachable || deviceMountable {
+			// For attachable/device-mountable volumes, use the unique volume name as reported by
+			// the plugin.
+			volumeName, err =
+				util.GetUniqueVolumeNameFromSpec(volumePlugin, volumeSpec)
+			if err != nil {
+				return "", fmt.Errorf(
+					"failed to GetUniqueVolumeNameFromSpec for volumeSpec %q using volume plugin %q err=%v",
+					volumeSpec.Name(),
+					volumePlugin.GetPluginName(),
+					err)
+			}
+		} else {
+			// For non-attachable and non-device-mountable volumes, generate a unique name based on the pod
+			// namespace and name and the name of the volume within the pod.
+			volumeName = util.GetUniqueVolumeNameFromSpecWithPod(podName, volumePlugin, volumeSpec)
 		}
-	} else {
-		// For non-attachable and non-device-mountable volumes, generate a unique name based on the pod
-		// namespace and name and the name of the volume within the pod.
-		volumeName = util.GetUniqueVolumeNameFromSpecWithPod(podName, volumePlugin, volumeSpec)
-	}
+	*/
+
+	// ADDED BY zhangjie
+	volumeName = util.GetUniqueVolumeNameFromSpecWithPod(podName, volumePlugin, volumeSpec)
 
 	if _, volumeExists := dsw.volumesToMount[volumeName]; !volumeExists {
 		var sizeLimit *resource.Quantity
@@ -272,13 +278,17 @@ func (dsw *desiredStateOfWorld) AddPodToVolume(
 			}
 		}
 		dsw.volumesToMount[volumeName] = volumeToMount{
-			volumeName:              volumeName,
-			podsToMount:             make(map[types.UniquePodName]podToMount),
-			pluginIsAttachable:      attachable,
-			pluginIsDeviceMountable: deviceMountable,
-			volumeGidValue:          volumeGidValue,
-			reportedInUse:           false,
-			desiredSizeLimit:        sizeLimit,
+			volumeName:  volumeName,
+			podsToMount: make(map[types.UniquePodName]podToMount),
+			// CHANGED BY zhangjie
+			pluginIsAttachable: false,
+			// pluginIsAttachable:      attachable,
+			// CHANGED BY zhangjie
+			pluginIsDeviceMountable: false,
+			//pluginIsDeviceMountable: deviceMountable,
+			volumeGidValue:   volumeGidValue,
+			reportedInUse:    false,
+			desiredSizeLimit: sizeLimit,
 		}
 	}
 
