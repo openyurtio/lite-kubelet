@@ -1,5 +1,6 @@
 package client
 
+/*
 import (
 	"fmt"
 	"time"
@@ -45,3 +46,6 @@ func NewMqttClient(broker string, port int, clientid, username, passwd string) m
 		fmt.Printf("connectd success")
 	}
 }
+
+
+*/
