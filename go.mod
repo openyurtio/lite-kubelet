@@ -101,6 +101,7 @@ require (
 	github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
 	github.com/dustin/go-humanize v1.0.0
+	github.com/eclipse/paho.mqtt.golang v1.3.5 // indirect
 	github.com/elazarl/goproxy v0.0.0-20180725130230-947c36da3153
 	github.com/emicklei/go-restful v2.9.5+incompatible
 	github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473
@@ -767,6 +768,8 @@ replace (
 	sigs.k8s.io/structured-merge-diff/v4 => sigs.k8s.io/structured-merge-diff/v4 v4.0.2
 	sigs.k8s.io/yaml => sigs.k8s.io/yaml v1.2.0
 )
+
+replace github.com/eclipse/paho.mqtt.golang => github.com/eclipse/paho.mqtt.golang v1.3.5
 
 replace k8s.io/api => ./staging/src/k8s.io/api
 

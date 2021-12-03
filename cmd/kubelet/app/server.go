@@ -91,6 +91,7 @@ import (
 	kubeletmetrics "k8s.io/kubernetes/pkg/kubelet/metrics"
 	"k8s.io/kubernetes/pkg/kubelet/server"
 	"k8s.io/kubernetes/pkg/kubelet/stats/pidlimit"
+	yurtclientset "k8s.io/kubernetes/pkg/openyurt/clientSet"
 	utilfs "k8s.io/kubernetes/pkg/util/filesystem"
 	"k8s.io/kubernetes/pkg/util/flock"
 	nodeutil "k8s.io/kubernetes/pkg/util/node"
@@ -539,9 +540,9 @@ func run(ctx context.Context, s *options.KubeletServer, kubeDeps *kubelet.Depend
 	*/
 
 	// About to get clients and such, detect standaloneMode
-	standaloneMode := true
 	// DELETE BY zhangjie
 	/*
+		standaloneMode := true
 		if len(s.KubeConfig) > 0 {
 			standaloneMode = false
 		}
@@ -583,13 +584,18 @@ func run(ctx context.Context, s *options.KubeletServer, kubeDeps *kubelet.Depend
 
 	// if in standalone mode, indicate as much by setting all clients to nil
 	switch {
-	case standaloneMode:
-		kubeDeps.KubeClient = nil
-		kubeDeps.EventClient = nil
-		kubeDeps.HeartbeatClient = nil
-		klog.Warningf("standalone mode, no API client")
+	// DELETE BY zhangjie
+	/*
+		case standaloneMode:
+			kubeDeps.KubeClient = nil
+			kubeDeps.EventClient = nil
+			kubeDeps.HeartbeatClient = nil
+			klog.Warningf("standalone mode, no API client")
+	*/
 
 	case kubeDeps.KubeClient == nil, kubeDeps.EventClient == nil, kubeDeps.HeartbeatClient == nil:
+		kubeDeps.HeartbeatClient = yurtclientset.NewSimpleClientset(nil)
+		kubeDeps.KubeClient = yurtclientset.NewSimpleClientset(nil)
 		// DELETE BY zhangjie
 		/*
 			clientConfig, closeAllConns, err := buildKubeletClientConfig(ctx, s, nodeName)

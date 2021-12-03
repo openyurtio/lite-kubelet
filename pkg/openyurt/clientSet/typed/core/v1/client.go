@@ -1,0 +1,35 @@
+package v1
+
+import (
+	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
+	"k8s.io/kubernetes/pkg/openyurt/mqtt/client"
+)
+
+type FakeCoreV1 struct {
+	MQTTClient client.KubeletOperatorInterface
+	fakecorev1.FakeCoreV1
+}
+
+func (f *FakeCoreV1) Pods(namespace string) corev1.PodInterface {
+	return &FakePods{
+		MQTTClient: f.MQTTClient,
+		FakePods:   fakecorev1.FakePods{Fake: &f.FakeCoreV1},
+		ns:         namespace,
+	}
+}
+
+func (f *FakeCoreV1) Nodes() corev1.NodeInterface {
+	return &FakeNodes{
+		MQTTClient: f.MQTTClient,
+		FakeNodes:  fakecorev1.FakeNodes{Fake: &f.FakeCoreV1},
+	}
+}
+
+func (f *FakeCoreV1) Events(namespace string) corev1.EventInterface {
+	return &FakeEvents{
+		MQTTClient: f.MQTTClient,
+		FakeEvents: fakecorev1.FakeEvents{Fake: &f.FakeCoreV1},
+		ns:         namespace,
+	}
+}

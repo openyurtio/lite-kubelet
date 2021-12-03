@@ -28,11 +28,6 @@ import (
 	"github.com/spf13/pflag"
 	kubectlcmd "k8s.io/kubectl/pkg/cmd"
 	"k8s.io/kubernetes/cmd/genutils"
-	apiservapp "k8s.io/kubernetes/cmd/kube-apiserver/app"
-	cmapp "k8s.io/kubernetes/cmd/kube-controller-manager/app"
-	proxyapp "k8s.io/kubernetes/cmd/kube-proxy/app"
-	schapp "k8s.io/kubernetes/cmd/kube-scheduler/app"
-	kubeadmapp "k8s.io/kubernetes/cmd/kubeadm/app/cmd"
 	kubeletapp "k8s.io/kubernetes/cmd/kubelet/app"
 )
 
@@ -59,34 +54,6 @@ func main() {
 	os.Setenv("HOME", "/home/username")
 
 	switch module {
-	case "kube-apiserver":
-		// generate manpage for kube-apiserver
-		apiserver := apiservapp.NewAPIServerCommand()
-		genMarkdown(apiserver, "", outDir)
-		for _, c := range apiserver.Commands() {
-			genMarkdown(c, "kube-apiserver", outDir)
-		}
-	case "kube-controller-manager":
-		// generate manpage for kube-controller-manager
-		controllermanager := cmapp.NewControllerManagerCommand()
-		genMarkdown(controllermanager, "", outDir)
-		for _, c := range controllermanager.Commands() {
-			genMarkdown(c, "kube-controller-manager", outDir)
-		}
-	case "kube-proxy":
-		// generate manpage for kube-proxy
-		proxy := proxyapp.NewProxyCommand()
-		genMarkdown(proxy, "", outDir)
-		for _, c := range proxy.Commands() {
-			genMarkdown(c, "kube-proxy", outDir)
-		}
-	case "kube-scheduler":
-		// generate manpage for kube-scheduler
-		scheduler := schapp.NewSchedulerCommand()
-		genMarkdown(scheduler, "", outDir)
-		for _, c := range scheduler.Commands() {
-			genMarkdown(c, "kube-scheduler", outDir)
-		}
 	case "kubelet":
 		// generate manpage for kubelet
 		kubelet := kubeletapp.NewKubeletCommand()
@@ -101,13 +68,6 @@ func main() {
 		genMarkdown(kubectl, "", outDir)
 		for _, c := range kubectl.Commands() {
 			genMarkdown(c, "kubectl", outDir)
-		}
-	case "kubeadm":
-		// generate manpage for kubelet
-		kubeadm := kubeadmapp.NewKubeadmCommand(os.Stdin, os.Stdout, os.Stderr)
-		genMarkdown(kubeadm, "", outDir)
-		for _, c := range kubeadm.Commands() {
-			genMarkdown(c, "kubeadm", outDir)
 		}
 	default:
 		fmt.Fprintf(os.Stderr, "Module %s is not supported", module)
