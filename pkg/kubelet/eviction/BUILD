@@ -40,6 +40,7 @@ go_library(
     srcs = [
         "doc.go",
         "eviction_manager.go",
+        "eviction_manager_yurt.go",
         "helpers.go",
         "memory_threshold_notifier.go",
         "threshold_notifier_linux.go",

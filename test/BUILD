@@ -21,7 +21,6 @@ filegroup(
         "//test/fuzz/yaml:all-srcs",
         "//test/images:all-srcs",
         "//test/instrumentation:all-srcs",
-        "//test/integration:all-srcs",
         "//test/kubemark:all-srcs",
         "//test/list:all-srcs",
         "//test/soak/serve_hostnames:all-srcs",

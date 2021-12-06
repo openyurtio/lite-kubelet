@@ -47,23 +47,13 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//pkg/volume:go_default_library",
-        "//pkg/volume/awsebs:go_default_library",
-        "//pkg/volume/csi/testing:go_default_library",
-        "//pkg/volume/gcepd:go_default_library",
-        "//pkg/volume/testing:go_default_library",
         "//pkg/volume/util/hostutil:go_default_library",
         "//pkg/volume/util/types:go_default_library",
         "//staging/src/k8s.io/api/core/v1:go_default_library",
         "//staging/src/k8s.io/apimachinery/pkg/apis/meta/v1:go_default_library",
         "//staging/src/k8s.io/apimachinery/pkg/types:go_default_library",
         "//staging/src/k8s.io/apimachinery/pkg/util/uuid:go_default_library",
-        "//staging/src/k8s.io/client-go/kubernetes/fake:go_default_library",
-        "//staging/src/k8s.io/client-go/tools/record:go_default_library",
-        "//staging/src/k8s.io/component-base/metrics/legacyregistry:go_default_library",
         "//staging/src/k8s.io/csi-translation-lib:go_default_library",
-        "//staging/src/k8s.io/csi-translation-lib/plugins:go_default_library",
-        "//vendor/github.com/prometheus/client_model/go:go_default_library",
-        "//vendor/github.com/stretchr/testify/assert:go_default_library",
     ],
 )
 

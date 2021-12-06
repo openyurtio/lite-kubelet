@@ -16,6 +16,8 @@ limitations under the License.
 
 package operationexecutor
 
+/*
+
 import (
 	"github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
@@ -196,3 +198,6 @@ func initTestPlugins(t *testing.T, plugs []volume.VolumePlugin, pluginName strin
 
 	return pluginMgr, tmpDir
 }
+
+
+*/

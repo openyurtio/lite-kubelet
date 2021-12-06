@@ -59,7 +59,6 @@ go_test(
         "//pkg/controller/volume/attachdetach/testing:go_default_library",
         "//pkg/features:go_default_library",
         "//pkg/volume:go_default_library",
-        "//pkg/volume/awsebs:go_default_library",
         "//pkg/volume/csimigration:go_default_library",
         "//pkg/volume/util/operationexecutor:go_default_library",
         "//pkg/volume/util/types:go_default_library",

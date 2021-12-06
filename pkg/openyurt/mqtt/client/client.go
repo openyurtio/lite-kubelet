@@ -1,18 +1,25 @@
 package client
 
-/*
 import (
 	"fmt"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+
+	"k8s.io/klog/v2"
 )
 
-//var broker = "post-cn-zvp2gmir011.mqtt.aliyuncs.com"
-// var port = 8883
-//opts.SetClientID("GID_NODE@@@sub-test")
-//opts.SetUsername("Signature|LTAI5tPifShJfSx1SxbfMhT2|post-cn-zvp2gmir011")
-//opts.SetPassword("iYAq6TzRAsD9uE9/wci7B/fAze4=")
+var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
+	klog.V(4).Infof("Publish Message: %s from topic: %s", string(msg.Payload()), msg.Topic())
+}
+
+var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
+	klog.V(4).Infof("Connected mqtt broker")
+}
+
+var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
+	klog.V(4).Infof("Connect lost:%v", err)
+}
 
 func NewMqttClient(broker string, port int, clientid, username, passwd string) mqtt.Client {
 
@@ -46,6 +53,3 @@ func NewMqttClient(broker string, port int, clientid, username, passwd string) m
 		fmt.Printf("connectd success")
 	}
 }
-
-
-*/

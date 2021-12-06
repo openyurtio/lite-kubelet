@@ -44,7 +44,6 @@ filegroup(
     name = "all-srcs",
     srcs = [
         ":package-srcs",
-        "//vendor/github.com/google/cadvisor/container/docker/install:all-srcs",
         "//vendor/github.com/google/cadvisor/container/docker/utils:all-srcs",
     ],
     tags = ["automanaged"],

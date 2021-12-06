@@ -19,8 +19,6 @@ go_library(
     ],
     importpath = "k8s.io/kubernetes/test/e2e_node/services",
     deps = [
-        "//cmd/kube-apiserver/app:go_default_library",
-        "//cmd/kube-apiserver/app/options:go_default_library",
         "//cmd/kubelet/app/options:go_default_library",
         "//pkg/controller/namespace:go_default_library",
         "//pkg/features:go_default_library",

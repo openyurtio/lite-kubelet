@@ -19,12 +19,9 @@ package services
 import (
 	"fmt"
 	"io/ioutil"
-	"net"
 
 	"k8s.io/apiserver/pkg/storage/storagebackend"
 
-	apiserver "k8s.io/kubernetes/cmd/kube-apiserver/app"
-	"k8s.io/kubernetes/cmd/kube-apiserver/app/options"
 	"k8s.io/kubernetes/test/e2e/framework"
 )
 
@@ -46,41 +43,44 @@ func NewAPIServer(storageConfig storagebackend.Config) *APIServer {
 
 // Start starts the apiserver, returns when apiserver is ready.
 func (a *APIServer) Start() error {
-	const tokenFilePath = "known_tokens.csv"
+	/*
+		const tokenFilePath = "known_tokens.csv"
 
-	o := options.NewServerRunOptions()
-	o.Etcd.StorageConfig = a.storageConfig
-	_, ipnet, err := net.ParseCIDR(clusterIPRange)
-	if err != nil {
-		return err
-	}
-	o.SecureServing.BindAddress = net.ParseIP("127.0.0.1")
-	o.ServiceClusterIPRanges = ipnet.String()
-	o.AllowPrivileged = true
-	if err := generateTokenFile(tokenFilePath); err != nil {
-		return fmt.Errorf("failed to generate token file %s: %v", tokenFilePath, err)
-	}
-	o.Authentication.TokenFile.TokenFile = tokenFilePath
-	o.Admission.GenericAdmission.DisablePlugins = []string{"ServiceAccount", "TaintNodesByCondition"}
-	errCh := make(chan error)
-	go func() {
-		defer close(errCh)
-		completedOptions, err := apiserver.Complete(o)
+		o := options.NewServerRunOptions()
+		o.Etcd.StorageConfig = a.storageConfig
+		_, ipnet, err := net.ParseCIDR(clusterIPRange)
 		if err != nil {
-			errCh <- fmt.Errorf("set apiserver default options error: %v", err)
-			return
+			return err
 		}
-		err = apiserver.Run(completedOptions, a.stopCh)
-		if err != nil {
-			errCh <- fmt.Errorf("run apiserver error: %v", err)
-			return
+		o.SecureServing.BindAddress = net.ParseIP("127.0.0.1")
+		o.ServiceClusterIPRanges = ipnet.String()
+		o.AllowPrivileged = true
+		if err := generateTokenFile(tokenFilePath); err != nil {
+			return fmt.Errorf("failed to generate token file %s: %v", tokenFilePath, err)
 		}
-	}()
+		o.Authentication.TokenFile.TokenFile = tokenFilePath
+		o.Admission.GenericAdmission.DisablePlugins = []string{"ServiceAccount", "TaintNodesByCondition"}
+		errCh := make(chan error)
+		go func() {
+			defer close(errCh)
+			completedOptions, err := apiserver.Complete(o)
+			if err != nil {
+				errCh <- fmt.Errorf("set apiserver default options error: %v", err)
+				return
+			}
+			err = apiserver.Run(completedOptions, a.stopCh)
+			if err != nil {
+				errCh <- fmt.Errorf("run apiserver error: %v", err)
+				return
+			}
+		}()
 
-	err = readinessCheck("apiserver", []string{getAPIServerHealthCheckURL()}, errCh)
-	if err != nil {
-		return err
-	}
+		err = readinessCheck("apiserver", []string{getAPIServerHealthCheckURL()}, errCh)
+		if err != nil {
+			return err
+		}
+
+	*/
 	return nil
 }
 
