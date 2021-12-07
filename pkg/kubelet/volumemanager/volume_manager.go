@@ -370,10 +370,24 @@ func (vm *volumeManager) WaitForAttachAndMount(pod *v1.Pod) error {
 		return nil
 	}
 
-	expectedVolumes := getExpectedVolumes(pod)
-	if len(expectedVolumes) == 0 {
-		// No volumes to verify
-		return nil
+	// DELETED BY zhangjie
+	/*
+		expectedVolumes := getExpectedVolumes(pod)
+		if len(expectedVolumes) == 0 {
+			// No volumes to verify
+			return nil
+		}
+	*/
+	containerMounts, _ := util.GetPodVolumeNames(pod)
+
+	expectedVolumes := make([]string, 0, 5)
+	// ADDED BY zhangjie, expectVolumes only support EmptyDir and HostPath
+	for _, v := range pod.Spec.Volumes {
+		if v.HostPath != nil || v.EmptyDir != nil {
+			if containerMounts.Has(v.Name) {
+				expectedVolumes = append(expectedVolumes, v.Name)
+			}
+		}
 	}
 
 	klog.V(3).Infof("Waiting for volumes to attach and mount for pod %q", format.Pod(pod))
@@ -399,7 +413,11 @@ func (vm *volumeManager) WaitForAttachAndMount(pod *v1.Pod) error {
 		if len(unmountedVolumes) == 0 {
 			return nil
 		}
-
+		klog.Errorf(
+			"unmounted volumes=%v, unattached volumes=%v: %s",
+			unmountedVolumes,
+			unattachedVolumes,
+			err)
 		return fmt.Errorf(
 			"unmounted volumes=%v, unattached volumes=%v: %s",
 			unmountedVolumes,
@@ -430,7 +448,9 @@ func (vm *volumeManager) verifyVolumesMountedFunc(podName types.UniquePodName, e
 		if errs := vm.desiredStateOfWorld.PopPodErrors(podName); len(errs) > 0 {
 			return true, errors.New(strings.Join(errs, "; "))
 		}
-		return len(vm.getUnmountedVolumes(podName, expectedVolumes)) == 0, nil
+		unmounted := vm.getUnmountedVolumes(podName, expectedVolumes)
+		klog.V(4).Infof("verifyVolumesMountedFunc unmounted %v", unmounted)
+		return len(unmounted) == 0, nil
 	}
 }
 

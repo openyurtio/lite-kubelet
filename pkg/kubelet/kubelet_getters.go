@@ -24,11 +24,12 @@ import (
 	"path/filepath"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	cadvisorapiv1 "github.com/google/cadvisor/info/v1"
 	cadvisorv2 "github.com/google/cadvisor/info/v2"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/kubelet/cm"
 	"k8s.io/kubernetes/pkg/kubelet/config"
@@ -37,6 +38,10 @@ import (
 	utilnode "k8s.io/kubernetes/pkg/util/node"
 	"k8s.io/mount-utils"
 	utilpath "k8s.io/utils/path"
+)
+
+const (
+	maxConfigLength = 10 * 1 << 20 // 10MB
 )
 
 // getRootDir returns the full path to the directory under which kubelet can
@@ -231,6 +236,37 @@ func (kl *Kubelet) getRuntime() kubecontainer.Runtime {
 
 // GetNode returns the node info for the configured node name of this Kubelet.
 func (kl *Kubelet) GetNode() (*v1.Node, error) {
+	/*
+		nodelocal := filepath.Join(manifest.GetNodesManifestPath(kl.mqttManifestPath), fmt.Sprintf("%s.yaml", kl.nodeName))
+
+		_, err := os.Stat(nodelocal)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				klog.Warningf("can not get node local cache %s ", nodelocal)
+			}
+			klog.Warningf("os.Stat node local cache %s error %v", nodelocal, err)
+			return kl.initialNode(context.TODO())
+		}
+
+		file, err := os.Open(nodelocal)
+		if err != nil {
+			return nil, err
+		}
+		defer file.Close()
+
+		node := &v1.Node{}
+		data, err := utilio.ReadAtMost(file, maxConfigLength)
+		if err != nil {
+			klog.Error("Read at most file %s error %v", nodelocal, err)
+			return nil, err
+		}
+		if err := yaml.Unmarshal(data, node); err != nil {
+			klog.Error("yaml unmarshal file %s contents to node error %v", nodelocal, err)
+			return nil, err
+		}
+		klog.V(4).Infof("Get node info successfull from local cache %v", nodelocal)
+		return node, nil
+	*/
 	if kl.kubeClient == nil {
 		return kl.initialNode(context.TODO())
 	}

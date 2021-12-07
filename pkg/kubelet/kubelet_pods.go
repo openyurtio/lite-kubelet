@@ -146,8 +146,10 @@ func makeMounts(pod *v1.Pod, podDir string, container *v1.Container, hostName, h
 		mountEtcHostsFile = mountEtcHostsFile && (mount.MountPath != etcHostsPath)
 		vol, ok := podVolumes[mount.Name]
 		if !ok || vol.Mounter == nil {
-			klog.Errorf("Mount cannot be satisfied for container %q, because the volume is missing (ok=%v) or the volume mounter (vol.Mounter) is nil (vol=%+v): %+v", container.Name, ok, vol, mount)
-			return nil, cleanupAction, fmt.Errorf("cannot find volume %q to mount into container %q", mount.Name, container.Name)
+			// CHANGED BY zhangjie, return to continue
+			klog.Warningf("Mount cannot be satisfied for container %q, because the volume is missing (ok=%v) or the volume mounter (vol.Mounter) is nil (vol=%+v): %+v, so do nothing", container.Name, ok, vol, mount)
+			//return nil, cleanupAction, fmt.Errorf("cannot find volume %q to mount into container %q", mount.Name, container.Name)
+			continue
 		}
 
 		relabelVolume := false

@@ -92,6 +92,7 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/server"
 	"k8s.io/kubernetes/pkg/kubelet/stats/pidlimit"
 	yurtclientset "k8s.io/kubernetes/pkg/openyurt/clientSet"
+	localclient "k8s.io/kubernetes/pkg/openyurt/mqtt/client"
 	utilfs "k8s.io/kubernetes/pkg/util/filesystem"
 	"k8s.io/kubernetes/pkg/util/flock"
 	nodeutil "k8s.io/kubernetes/pkg/util/node"
@@ -594,8 +595,20 @@ func run(ctx context.Context, s *options.KubeletServer, kubeDeps *kubelet.Depend
 	*/
 
 	case kubeDeps.KubeClient == nil, kubeDeps.EventClient == nil, kubeDeps.HeartbeatClient == nil:
-		kubeDeps.HeartbeatClient = yurtclientset.NewSimpleClientset(nil)
-		kubeDeps.KubeClient = yurtclientset.NewSimpleClientset(nil)
+		lc, err := localclient.NewLocalClient(s.MqttBroker,
+			s.MqttBrokerPort,
+			s.MqttClientID,
+			s.MqttUserName,
+			s.MqttPassword,
+		)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("error test")
+		kubeDeps.NodesIndexer = lc.GetNodesIndexer()
+		kubeDeps.HeartbeatClient = yurtclientset.NewSimpleClientset(lc)
+
+		//kubeDeps.KubeClient = yurtclientset.NewSimpleClientset(nil)
 		// DELETE BY zhangjie
 		/*
 			clientConfig, closeAllConns, err := buildKubeletClientConfig(ctx, s, nodeName)

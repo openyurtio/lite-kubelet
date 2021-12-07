@@ -650,7 +650,7 @@ func getDeviceMountPath(volume *reconstructedVolume) (string, error) {
 
 func (rc *reconciler) updateStates(volumesNeedUpdate map[v1.UniqueVolumeName]*reconstructedVolume) error {
 	// Get the node status to retrieve volume device path information.
-	rc.updateDevicePath(volumesNeedUpdate)
+	// rc.updateDevicePath(volumesNeedUpdate)
 
 	for _, volume := range volumesNeedUpdate {
 		err := rc.actualStateOfWorld.MarkVolumeAsAttached(

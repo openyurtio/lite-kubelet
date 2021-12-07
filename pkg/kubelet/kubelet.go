@@ -31,7 +31,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"k8s.io/client-go/informers"
+	"k8s.io/kubernetes/pkg/openyurt/fileCache"
+
+	"k8s.io/kubernetes/pkg/openyurt/mqtt/manifest"
 
 	cadvisorapi "github.com/google/cadvisor/info/v1"
 	"k8s.io/mount-utils"
@@ -39,7 +41,6 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/clock"
@@ -230,6 +231,7 @@ type Dependencies struct {
 	dockerLegacyService  legacy.DockerLegacyService
 	// remove it after cadvisor.UsingLegacyCadvisorStats dropped.
 	useLegacyCadvisorStats bool
+	NodesIndexer           cache.Indexer
 }
 
 // DockerOptions contains docker specific configuration. Importantly, since it
@@ -262,10 +264,21 @@ func makePodSourceConfig(kubeCfg *kubeletconfiginternal.KubeletConfiguration, ku
 		config.NewSourceFile(kubeCfg.StaticPodPath, nodeName, kubeCfg.FileCheckFrequency.Duration, cfg.Channel(kubetypes.FileSource), kubetypes.FileSource)
 	}
 
-	if kubeCfg.MqttPodPath != "" {
-		klog.Infof("Adding pod mqtt path: %v", kubeCfg.MqttPodPath)
-		config.NewSourceFile(kubeCfg.MqttPodPath, nodeName, kubeCfg.FileCheckFrequency.Duration, cfg.Channel(kubetypes.MqttFileSource), kubetypes.MqttFileSource)
+	podMqttPath := manifest.GetPodsManifestPath()
+	klog.Infof("Adding pod mqtt path: %v", podMqttPath)
+
+	updates := cfg.Channel(kubetypes.MqttFileSource)
+	send := func(cache cache.Indexer) {
+		pods := make([]*v1.Pod, 0, 10)
+		for _, o := range cache.List() {
+			if p, ok := o.(*v1.Pod); ok {
+				klog.V(4).Infof("Get Pod [%s][%s] from local mqtt cache path %s", p.GetNamespace(), p.GetName(), podMqttPath)
+				pods = append(pods, p)
+			}
+		}
+		updates <- kubetypes.PodUpdate{Pods: pods, Op: kubetypes.SET, Source: kubetypes.MqttFileSource}
 	}
+	fileCache.NewFileObiectIndexer(fileCache.NewDefaultFilePodDeps(podMqttPath), false, send)
 
 	// define url config source
 	// DELETED BY zhangjie
@@ -455,27 +468,32 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	var nodeHasSynced cache.InformerSynced
 	var nodeLister corelisters.NodeLister
 
-	if kubeDeps.KubeClient != nil {
-		kubeInformers := informers.NewSharedInformerFactoryWithOptions(kubeDeps.KubeClient, 0, informers.WithTweakListOptions(func(options *metav1.ListOptions) {
-			options.FieldSelector = fields.Set{api.ObjectNameField: string(nodeName)}.String()
-		}))
-		nodeLister = kubeInformers.Core().V1().Nodes().Lister()
-		nodeHasSynced = func() bool {
-			if kubeInformers.Core().V1().Nodes().Informer().HasSynced() {
-				return true
+	// DELETE BY zhangjie  nodeLister is useless
+	/*
+		if kubeDeps.KubeClient != nil {
+			kubeInformers := informers.NewSharedInformerFactoryWithOptions(kubeDeps.KubeClient, 0, informers.WithTweakListOptions(func(options *metav1.ListOptions) {
+				options.FieldSelector = fields.Set{api.ObjectNameField: string(nodeName)}.String()
+			}))
+			nodeLister = kubeInformers.Core().V1().Nodes().Lister()
+			nodeHasSynced = func() bool {
+				if kubeInformers.Core().V1().Nodes().Informer().HasSynced() {
+					return true
+				}
+				klog.Infof("kubelet nodes not sync")
+				return false
 			}
-			klog.Infof("kubelet nodes not sync")
-			return false
+			kubeInformers.Start(wait.NeverStop)
+			klog.Info("Kubelet client is not nil")
+		} else {
+			// we dont have a client to sync!
+			nodeIndexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
+			nodeLister = corelisters.NewNodeLister(nodeIndexer)
+			nodeHasSynced = func() bool { return true }
+			klog.Info("Kubelet client is nil")
 		}
-		kubeInformers.Start(wait.NeverStop)
-		klog.Info("Kubelet client is not nil")
-	} else {
-		// we dont have a client to sync!
-		nodeIndexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
-		nodeLister = corelisters.NewNodeLister(nodeIndexer)
-		nodeHasSynced = func() bool { return true }
-		klog.Info("Kubelet client is nil")
-	}
+	*/
+	nodeLister = corelisters.NewNodeLister(kubeDeps.NodesIndexer)
+	nodeHasSynced = func() bool { return true }
 
 	// construct a node reference used for events
 	nodeRef := &v1.ObjectReference{
@@ -500,6 +518,8 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		}
 	}
 	httpClient := &http.Client{}
+
+	manifest.MkdirAllSubManifestPath()
 
 	klet := &Kubelet{
 		hostname:                                hostname,
@@ -1208,6 +1228,9 @@ type Kubelet struct {
 
 	// Handles node shutdown events for the Node.
 	shutdownManager *nodeshutdown.Manager
+
+	// ADDED BY zhangjie , set mqtt manifest path
+	mqttManifestPath string
 }
 
 // ListPodStats is delegated to StatsProvider, which implements stats.Provider interface
@@ -1467,6 +1490,8 @@ func (kl *Kubelet) Run(updates <-chan kubetypes.PodUpdate) {
 		go wait.Until(kl.syncNodeStatus, kl.nodeStatusUpdateFrequency, wait.NeverStop)
 		go kl.fastStatusUpdateOnce()
 
+	}
+	if kl.heartbeatClient != nil {
 		// start syncing lease
 		go kl.nodeLeaseController.Run(wait.NeverStop)
 	}

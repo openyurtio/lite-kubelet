@@ -56,6 +56,17 @@ type KubeletFlags struct {
 	KubeConfig          string
 	BootstrapKubeconfig string
 
+	// The address of mqtt brocker
+	MqttBroker string
+	// The port of mqtt brocker
+	MqttBrokerPort int
+	// The clientid of mqtt brocker
+	MqttClientID string
+	// The username of mqtt brocker
+	MqttUserName string
+	// The password of mqtt brocker
+	MqttPassword string
+
 	// Insert a probability of random errors during calls to the master.
 	ChaosChance float64
 	// Crash immediately, rather than eating panics.
@@ -329,6 +340,12 @@ func (f *KubeletFlags) AddFlags(mainfs *pflag.FlagSet) {
 	// fs.StringVar(&f.KubeletConfigFile, "config", f.KubeletConfigFile, "The Kubelet will load its initial configuration from this file. The path may be absolute or relative; relative paths start at the Kubelet's current working directory. Omit this flag to use the built-in default configuration values. Command-line flags override configuration from this file.")
 	fs.StringVar(&f.KubeConfig, "kubeconfig", f.KubeConfig, "Path to a kubeconfig file, specifying how to connect to the API server. Providing --kubeconfig enables API server mode, omitting --kubeconfig enables standalone mode.")
 
+	fs.StringVar(&f.MqttBroker, "mqtt-broker", f.MqttBroker, "the address of mqtt broker")
+	fs.IntVar(&f.MqttBrokerPort, "mqtt-broker-port", f.MqttBrokerPort, "the port of mqtt broker")
+	fs.StringVar(&f.MqttClientID, "mqtt-clientid", f.MqttClientID, "mqtt client id")
+	fs.StringVar(&f.MqttUserName, "mqtt-username", f.MqttUserName, "mqtt username")
+	fs.StringVar(&f.MqttPassword, "mqtt-password", f.MqttPassword, "mqtt password")
+
 	fs.StringVar(&f.BootstrapKubeconfig, "bootstrap-kubeconfig", f.BootstrapKubeconfig, "Path to a kubeconfig file that will be used to get client certificate for kubelet. "+
 		"If the file specified by --kubeconfig does not exist, the bootstrap kubeconfig is used to request a client certificate from the API server. "+
 		"On success, a kubeconfig file referencing the generated client certificate and key is written to the path specified by --kubeconfig. "+
@@ -416,7 +433,6 @@ func AddKubeletConfigFlags(mainfs *pflag.FlagSet, c *kubeletconfig.KubeletConfig
 
 	fs.BoolVar(&c.FailSwapOn, "fail-swap-on", c.FailSwapOn, "Makes the Kubelet fail to start if swap is enabled on the node. ")
 	fs.StringVar(&c.StaticPodPath, "pod-manifest-path", c.StaticPodPath, "Path to the directory containing static pod files to run, or the path to a single static pod file. Files starting with dots will be ignored.")
-	fs.StringVar(&c.MqttPodPath, "mqtt-pod-manifest-path", c.MqttPodPath, "Path to the directory containing mqtt pod files to run, or the path to a single mqtt pod file. Files starting with dots will be ignored.")
 	fs.DurationVar(&c.SyncFrequency.Duration, "sync-frequency", c.SyncFrequency.Duration, "Max period between synchronizing running containers and config")
 	fs.DurationVar(&c.FileCheckFrequency.Duration, "file-check-frequency", c.FileCheckFrequency.Duration, "Duration between checking config files for new data")
 	fs.DurationVar(&c.HTTPCheckFrequency.Duration, "http-check-frequency", c.HTTPCheckFrequency.Duration, "Duration between checking http for new data")

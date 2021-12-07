@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 	utilio "k8s.io/utils/io"
@@ -20,6 +21,17 @@ var FileNoNameSpacedSpecificError = fmt.Errorf("fileName does not meet the speci
 
 // FileIndexFunc knows how to compute the set of indexed values for an file.
 type FileIndexFunc func(path string) (string, error)
+
+func CreateFileNameByNamespacedObject(obj interface{}) (string, error) {
+	meta, err := meta.Accessor(obj)
+	if err != nil {
+		return "", fmt.Errorf("object has no meta: %v", err)
+	}
+	if len(meta.GetNamespace()) > 0 {
+		return meta.GetNamespace() + NameSpaceSpliceFileKey + meta.GetName() + FileSuffix, nil
+	}
+	return meta.GetName() + FileSuffix, nil
+}
 
 func FileNamespaceNameKeyFunc(path string) (string, error) {
 	base := filepath.Base(path)
@@ -62,12 +74,12 @@ func getNewDefault(v interface{}) interface{} {
 	return reflect.New(t).Interface()
 }
 
-func NewFileObiectIndexer(ofi FileObjectDeps, send func(indexer cache.Indexer)) cache.Indexer {
+func NewFileObiectIndexer(ofi FileObjectDeps, regularList bool, send func(indexer cache.Indexer)) cache.Indexer {
 
 	path := ofi.GetDir()
 
 	watchEvents := make(chan *watchFileEvent, 10)
-	NewObjectSourceFile(path, watchEvents)
+	NewObjectSourceFile(path, regularList, watchEvents)
 	keyFunc := ofi.GetObjectKeyFunc()
 
 	indexer := cache.NewIndexer(keyFunc, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})

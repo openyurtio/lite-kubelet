@@ -7,29 +7,29 @@ import (
 )
 
 type FakeCoreV1 struct {
-	MQTTClient client.KubeletOperatorInterface
+	LocalClient client.KubeletOperatorInterface
 	fakecorev1.FakeCoreV1
 }
 
 func (f *FakeCoreV1) Pods(namespace string) corev1.PodInterface {
 	return &FakePods{
-		MQTTClient: f.MQTTClient,
-		FakePods:   fakecorev1.FakePods{Fake: &f.FakeCoreV1},
-		ns:         namespace,
+		LocalClient: f.LocalClient,
+		FakePods:    fakecorev1.FakePods{Fake: &f.FakeCoreV1},
+		ns:          namespace,
 	}
 }
 
 func (f *FakeCoreV1) Nodes() corev1.NodeInterface {
 	return &FakeNodes{
-		MQTTClient: f.MQTTClient,
-		FakeNodes:  fakecorev1.FakeNodes{Fake: &f.FakeCoreV1},
+		LocalClient: f.LocalClient,
+		FakeNodes:   fakecorev1.FakeNodes{Fake: &f.FakeCoreV1},
 	}
 }
 
 func (f *FakeCoreV1) Events(namespace string) corev1.EventInterface {
 	return &FakeEvents{
-		MQTTClient: f.MQTTClient,
-		FakeEvents: fakecorev1.FakeEvents{Fake: &f.FakeCoreV1},
-		ns:         namespace,
+		LocalClient: f.LocalClient,
+		FakeEvents:  fakecorev1.FakeEvents{Fake: &f.FakeCoreV1},
+		ns:          namespace,
 	}
 }

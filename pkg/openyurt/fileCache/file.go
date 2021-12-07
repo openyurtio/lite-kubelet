@@ -42,6 +42,7 @@ type watchFileEvent struct {
 
 type ObjectSourceFile struct {
 	path        string
+	regularList bool
 	watchEvents chan<- *watchFileEvent
 }
 
@@ -61,17 +62,18 @@ func (w *watchFileEvent) String() string {
 }
 
 // NewObjectSourceFile watches a object file for changes.
-func NewObjectSourceFile(path string, events chan<- *watchFileEvent) {
+func NewObjectSourceFile(path string, regularList bool, events chan<- *watchFileEvent) {
 	// "github.com/sigma/go-inotify" requires a path without trailing "/"
 	path = strings.TrimRight(path, string(os.PathSeparator))
 
-	config := newObjectSourceFile(path, events)
+	config := newObjectSourceFile(path, regularList, events)
 	config.run()
 }
 
-func newObjectSourceFile(path string, events chan<- *watchFileEvent) *ObjectSourceFile {
+func newObjectSourceFile(path string, regularList bool, events chan<- *watchFileEvent) *ObjectSourceFile {
 	return &ObjectSourceFile{
 		path:        path,
+		regularList: regularList,
 		watchEvents: events,
 	}
 }
@@ -84,6 +86,10 @@ func (s *ObjectSourceFile) run() {
 		// Read path immediately to speed up startup.
 		if err := s.listConfig(); err != nil {
 			klog.Errorf("Unable to read config path %q: %v", s.path, err)
+		}
+		if !s.regularList {
+			klog.Warningf("ObjectSourceFile set regularList %v, so do not regular list dir %v", s.regularList, s.path)
+			return
 		}
 		for {
 			select {

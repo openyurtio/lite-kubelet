@@ -12,7 +12,7 @@ import (
 
 // FakeEvents implements EventInterface
 type FakeEvents struct {
-	MQTTClient client.KubeletOperatorInterface
+	LocalClient client.KubeletOperatorInterface
 	fakecorev1.FakeEvents
 	ns string
 }

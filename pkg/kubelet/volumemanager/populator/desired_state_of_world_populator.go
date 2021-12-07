@@ -343,48 +343,53 @@ func (dswp *desiredStateOfWorldPopulator) processPodVolumes(pod *v1.Pod) {
 			continue
 		}
 
-		// CHANGED BY zhangjie
-		_, volumeSpec, volumeGidValue, err :=
-			//pvc, volumeSpec, volumeGidValue, err :=
-			dswp.createVolumeSpec(podVolume, pod, mounts, devices)
-		if err != nil {
-			klog.Errorf(
-				"Error processing volume %q for pod %q: %v",
-				podVolume.Name,
-				format.Pod(pod),
-				err)
-			dswp.desiredStateOfWorld.AddErrorToPod(uniquePodName, err.Error())
-			allVolumesAdded = false
-			continue
-		}
+		// ADDED BY zhangjie
+		// Only support EmptyDir and HostPath
+		if podVolume.VolumeSource.EmptyDir != nil || podVolume.VolumeSource.HostPath != nil {
 
-		// Add volume to desired state of world
-		_, err = dswp.desiredStateOfWorld.AddPodToVolume(
-			uniquePodName, pod, volumeSpec, podVolume.Name, volumeGidValue)
-		if err != nil {
-			klog.Errorf(
-				"Failed to add volume %s (specName: %s) for pod %q to desiredStateOfWorld: %v",
-				podVolume.Name,
-				volumeSpec.Name(),
-				uniquePodName,
-				err)
-			dswp.desiredStateOfWorld.AddErrorToPod(uniquePodName, err.Error())
-			allVolumesAdded = false
-		} else {
-			klog.V(4).Infof(
-				"Added volume %q (volSpec=%q) for pod %q to desired state.",
-				podVolume.Name,
-				volumeSpec.Name(),
-				uniquePodName)
-		}
-
-		// DELETED BY zhangjie
-		/*
-			if expandInUsePV {
-				dswp.checkVolumeFSResize(pod, podVolume, pvc, volumeSpec,
-					uniquePodName, mountedVolumesForPod, processedVolumesForFSResize)
+			// CHANGED BY zhangjie
+			_, volumeSpec, volumeGidValue, err :=
+				//pvc, volumeSpec, volumeGidValue, err :=
+				dswp.createVolumeSpec(podVolume, pod, mounts, devices)
+			if err != nil {
+				klog.Errorf(
+					"Error processing volume %q for pod %q: %v",
+					podVolume.Name,
+					format.Pod(pod),
+					err)
+				dswp.desiredStateOfWorld.AddErrorToPod(uniquePodName, err.Error())
+				allVolumesAdded = false
+				continue
 			}
-		*/
+
+			// Add volume to desired state of world
+			_, err = dswp.desiredStateOfWorld.AddPodToVolume(
+				uniquePodName, pod, volumeSpec, podVolume.Name, volumeGidValue)
+			if err != nil {
+				klog.Errorf(
+					"Failed to add volume %s (specName: %s) for pod %q to desiredStateOfWorld: %v",
+					podVolume.Name,
+					volumeSpec.Name(),
+					uniquePodName,
+					err)
+				dswp.desiredStateOfWorld.AddErrorToPod(uniquePodName, err.Error())
+				allVolumesAdded = false
+			} else {
+				klog.V(4).Infof(
+					"Added volume %q (volSpec=%q) for pod %q to desired state.",
+					podVolume.Name,
+					volumeSpec.Name(),
+					uniquePodName)
+			}
+
+			// DELETED BY zhangjie
+			/*
+				if expandInUsePV {
+					dswp.checkVolumeFSResize(pod, podVolume, pvc, volumeSpec,
+						uniquePodName, mountedVolumesForPod, processedVolumesForFSResize)
+				}
+			*/
+		}
 	}
 
 	// some of the volume additions may have failed, should not mark this pod as fully processed

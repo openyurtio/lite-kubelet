@@ -1,6 +1,7 @@
 package fileCache
 
 import (
+	coordinationv1 "k8s.io/api/coordination/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 )
@@ -18,9 +19,9 @@ type FileConfigMapDeps struct {
 	FileKeyFunc FileIndexFunc
 }
 
-func NewDefaultFileConfigMapDeps() *FileConfigMapDeps {
+func NewDefaultFileConfigMapDeps(dir string) *FileConfigMapDeps {
 	return &FileConfigMapDeps{
-		PathDir: "/etc/kubernetes/fileCache/configmaps",
+		PathDir: dir,
 	}
 }
 
@@ -49,9 +50,9 @@ type FileServiceDeps struct {
 	FileKeyFunc FileIndexFunc
 }
 
-func NewDefaultFileServiceDeps() *FileServiceDeps {
+func NewDefaultFileServiceDeps(dir string) *FileServiceDeps {
 	return &FileServiceDeps{
-		PathDir: "/etc/kubernetes/fileCache/services",
+		PathDir: dir,
 	}
 }
 func (f *FileServiceDeps) GetObjectString() string {
@@ -78,9 +79,9 @@ type FileNodeDeps struct {
 	FileKeyFunc FileIndexFunc
 }
 
-func NewDefaultFileNodeDeps() *FileNodeDeps {
+func NewDefaultFileNodeDeps(dir string) *FileNodeDeps {
 	return &FileNodeDeps{
-		PathDir: "/etc/kubernetes/fileCache/nodes",
+		PathDir: dir,
 	}
 }
 func (f *FileNodeDeps) GetObjectString() string {
@@ -128,9 +129,9 @@ func (f *FileSecretDeps) GetObjectString() string {
 	return "Secret"
 }
 
-func NewDefaultFileSecretDeps() *FileSecretDeps {
+func NewDefaultFileSecretDeps(dir string) *FileSecretDeps {
 	return &FileSecretDeps{
-		PathDir: "/etc/kubernetes/fileCache/secrets",
+		PathDir: dir,
 	}
 }
 
@@ -159,9 +160,71 @@ func (f *FilePodDeps) GetObjectString() string {
 	return "Pod"
 }
 
-func NewDefaultFilePodDeps() *FilePodDeps {
+func NewDefaultFilePodDeps(dir string) *FilePodDeps {
 	return &FilePodDeps{
-		PathDir: "/etc/kubernetes/fileCache/pods",
+		PathDir: dir,
+	}
+}
+
+type FileLeaseDeps struct {
+	PathDir     string
+	FileKeyFunc FileIndexFunc
+}
+
+func (f *FileLeaseDeps) GetDir() string {
+	return f.PathDir
+}
+
+func (f *FileLeaseDeps) GetDefaultObject() interface{} {
+	return &coordinationv1.Lease{}
+}
+
+func (f *FileLeaseDeps) GetObjectKeyFunc() cache.KeyFunc {
+	return cache.MetaNamespaceKeyFunc
+}
+
+func (f *FileLeaseDeps) GetFileKeyFunc() FileIndexFunc {
+	return FileNamespaceNameKeyFunc
+}
+
+func (f *FileLeaseDeps) GetObjectString() string {
+	return "Lease"
+}
+
+func NewDefaultFileLeaseDeps(dir string) *FileLeaseDeps {
+	return &FileLeaseDeps{
+		PathDir: dir,
+	}
+}
+
+type FileEventDeps struct {
+	PathDir     string
+	FileKeyFunc FileIndexFunc
+}
+
+func (f *FileEventDeps) GetDir() string {
+	return f.PathDir
+}
+
+func (f *FileEventDeps) GetDefaultObject() interface{} {
+	return &v1.Event{}
+}
+
+func (f *FileEventDeps) GetObjectKeyFunc() cache.KeyFunc {
+	return cache.MetaNamespaceKeyFunc
+}
+
+func (f *FileEventDeps) GetFileKeyFunc() FileIndexFunc {
+	return FileNamespaceNameKeyFunc
+}
+
+func (f *FileEventDeps) GetObjectString() string {
+	return "Event"
+}
+
+func NewDefaultFileEventDeps(dir string) *FileEventDeps {
+	return &FileEventDeps{
+		PathDir: dir,
 	}
 }
 
@@ -170,3 +233,5 @@ var _ FileObjectDeps = &FileServiceDeps{}
 var _ FileObjectDeps = &FileNodeDeps{}
 var _ FileObjectDeps = &FileSecretDeps{}
 var _ FileObjectDeps = &FilePodDeps{}
+var _ FileObjectDeps = &FileLeaseDeps{}
+var _ FileObjectDeps = &FileEventDeps{}

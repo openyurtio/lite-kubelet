@@ -13,7 +13,7 @@ import (
 
 // FakePods implements PodInterface
 type FakePods struct {
-	MQTTClient client.KubeletOperatorInterface
+	LocalClient client.KubeletOperatorInterface
 	fakecorev1.FakePods
 	ns string
 }

@@ -25,7 +25,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
@@ -335,11 +335,17 @@ func (c *Configurer) GetPodDNS(pod *v1.Pod) (*runtimeapi.DNSConfig, error) {
 		return nil, err
 	}
 
-	dnsType, err := getPodDNSType(pod)
-	if err != nil {
-		klog.Errorf("Failed to get DNS type for pod %q: %v. Falling back to DNSClusterFirst policy.", format.Pod(pod), err)
-		dnsType = podDNSCluster
-	}
+	// DELETED BY zhangjie
+	/*
+		dnsType, err := getPodDNSType(pod)
+		if err != nil {
+			klog.Errorf("Failed to get DNS type for pod %q: %v. Falling back to DNSClusterFirst policy.", format.Pod(pod), err)
+			dnsType = podDNSCluster
+		}
+	*/
+	// ADDED BY zhangjie , only support podDNSHost
+	dnsType := podDNSHost
+	klog.Warningf("Pod dnsPolicy only support Default , use DNSHost config")
 	switch dnsType {
 	case podDNSNone:
 		// DNSNone should use empty DNS settings as the base.

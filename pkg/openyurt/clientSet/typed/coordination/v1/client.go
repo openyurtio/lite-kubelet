@@ -7,14 +7,14 @@ import (
 )
 
 type FakeCoordinationV1 struct {
-	MQTTClient client.KubeletOperatorInterface
+	LocalClient client.KubeletOperatorInterface
 	fakecoordinationv1.FakeCoordinationV1
 }
 
 func (f *FakeCoordinationV1) Leases(namespace string) v1.LeaseInterface {
 	return &FakeLeases{
-		MQTTClient: f.MQTTClient,
-		FakeLeases: fakecoordinationv1.FakeLeases{Fake: &f.FakeCoordinationV1},
-		ns:         namespace,
+		LocalClient: f.LocalClient,
+		FakeLeases:  fakecoordinationv1.FakeLeases{Fake: &f.FakeCoordinationV1},
+		ns:          namespace,
 	}
 }

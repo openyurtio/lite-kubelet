@@ -96,12 +96,6 @@ type KubeletConfiguration struct {
 	// +optional
 	StaticPodPath string `json:"staticPodPath,omitempty"`
 
-	// MqttPodPath is the path to the directory containing local (from mqtt) pods to
-	// run, or the path to a single mqtt source pod file.
-	// Default: ""
-	// +optional
-	MqttPodPath string `json:"mqttPodPath,omitempty"`
-
 	// syncFrequency is the max period between synchronizing running
 	// containers and config.
 	// Dynamic Kubelet Config (beta): If dynamically updating this field, consider that
