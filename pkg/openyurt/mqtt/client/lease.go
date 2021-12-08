@@ -64,14 +64,13 @@ func (l *leases) Get(ctx context.Context, name string, options metav1.GetOptions
 
 func (l *leases) Create(ctx context.Context, lease *coordinationv1.Lease, opts metav1.CreateOptions) (result *coordinationv1.Lease, err error) {
 	createTopic := filepath.Join(l.GetPreTopic(), lease.GetName())
-	klog.V(4).Infof("Lease create topic %s", createTopic)
 
 	if err := l.client.Send(createTopic, 1, false, lease, time.Second*5); err != nil {
 		klog.Errorf("Publish lease[%s][%s] data error %v", lease.Namespace, lease.Name, err)
 		return nil, apierrors.NewInternalError(fmt.Errorf("Publish Lease data error %v", err))
 	}
 
-	klog.Infof("###### Create lease[%s][%s] successfully", lease.GetNamespace(), lease.GetName())
+	klog.Infof("###### Create lease[%s][%s] by topic[%s] successfully", lease.GetNamespace(), lease.GetName(), createTopic)
 	return lease, nil
 }
 

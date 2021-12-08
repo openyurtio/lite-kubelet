@@ -604,7 +604,7 @@ func run(ctx context.Context, s *options.KubeletServer, kubeDeps *kubelet.Depend
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf("error test")
+		lc.SubscribeTopics(string(nodeName))
 		kubeDeps.NodesIndexer = lc.GetNodesIndexer()
 		kubeDeps.HeartbeatClient = yurtclientset.NewSimpleClientset(lc)
 

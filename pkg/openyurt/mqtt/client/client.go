@@ -1,64 +1,21 @@
 package client
 
 import (
-	"bufio"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
-	"k8s.io/kubernetes/pkg/openyurt/fileCache"
-
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
-	coordinationv1 "k8s.io/api/coordination/v1"
 	"k8s.io/klog/v2"
-	"k8s.io/kubernetes/pkg/openyurt/mqtt/manifest"
-	"sigs.k8s.io/yaml"
 )
 
 // Edge publish 的topic
-const MqttEdgePublishRootTopic = "/lite/edge/"
-const MqttCloudPublishRootTopic = "/lite/cloud/"
+const MqttEdgePublishRootTopic = "lite/edge/"
+const MqttCloudPublishRootTopic = "lite/cloud/"
 
 var mqttclient_once sync.Once
 var mqttclient mqtt.Client
-
-var subscribeMap = make(map[string]mqtt.MessageHandler)
-
-func SubCloudLeasesOperator(client mqtt.Client, message mqtt.Message) {
-	obj := &coordinationv1.Lease{}
-	if err := saveMessageToObjectFile(message, obj, manifest.GetLeasesManifestPath()); err != nil {
-		klog.Errorf("Save message[topic %s] payload to lease manifest error %v", message.Topic(), err)
-		return
-	}
-	return
-}
-
-func saveMessageToObjectFile(message mqtt.Message, obj interface{}, objectManifestPath string) error {
-
-	if err := yaml.Unmarshal(message.Payload(), obj); err != nil {
-		return fmt.Errorf("unmarshal mqtt message error %v", err)
-	}
-	name, err := fileCache.CreateFileNameByNamespacedObject(obj)
-	if err != nil {
-		return fmt.Errorf("get object filename error %v", err)
-	}
-	filePath := filepath.Join(objectManifestPath, name)
-
-	// must use CREATE AND TRUNC
-	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
-	if err != nil {
-		return fmt.Errorf("openfile %s error %v", filePath, err)
-	}
-	defer file.Close()
-	write := bufio.NewWriter(file)
-	if _, err := write.Write(message.Payload()); err != nil {
-		return fmt.Errorf("write payload error %v", err)
-	}
-	return write.Flush()
-}
 
 /// sets the MessageHandler that will be called when a message
 // is received that does not match any known subscriptions.
@@ -67,7 +24,7 @@ var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Me
 }
 
 var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
-	klog.V(4).Infof("Connected mqtt broker")
+	klog.V(4).Infof("Connected mqtt broker ...")
 }
 
 var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
@@ -103,17 +60,6 @@ func NewMqttClient(broker string, port int, clientid, username, passwd string) m
 			klog.Fatalf("Connect mqtt broker error %v", token.Error())
 		}
 
-		/*
-			for t, f := range subscribeMap {
-				klog.V(4).Infof("Prepare subscribe topic %s", t)
-				token := client.Subscribe(t, 1, f)
-				token.Wait()
-				if err := token.Error(); err != nil {
-					klog.Fatalf("Subscribe topic %s error %v", t, err)
-				}
-				klog.V(4).Infof("Subscribe topic %s successfully", t)
-			}
-		*/
 		mqttclient = client
 	})
 

@@ -1,13 +1,17 @@
 package client
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
-	"k8s.io/klog/v2"
-
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+
+	coordinationv1 "k8s.io/api/coordination/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/openyurt/fileCache"
 	"k8s.io/kubernetes/pkg/openyurt/mqtt/manifest"
 	"sigs.k8s.io/yaml"
@@ -35,7 +39,28 @@ type LocalClient struct {
 	nodes  cache.Indexer
 	leases cache.Indexer
 	events cache.Indexer
-	//pods   cache.Indexer
+}
+
+func (l *LocalClient) SubscribeTopics(nodename string) {
+	var subscribeMap = make(map[string]mqtt.MessageHandler)
+
+	// lease tpoic : /lite/cloud/leases/{nodename}
+	subscribeMap[filepath.Join(MqttCloudPublishRootTopic, "leases", nodename)] = func(client mqtt.Client, message mqtt.Message) {
+		if err := saveMessageToObjectFile(message, &coordinationv1.Lease{}, manifest.GetLeasesManifestPath()); err != nil {
+			klog.Errorf("Save message[topic %s] payload to lease manifest error %v", message.Topic(), err)
+		}
+	}
+
+	for t, f := range subscribeMap {
+		klog.V(4).Infof("Prepare subscribe topic %s", t)
+		token := l.send.Subscribe(t, 1, f)
+		token.Wait()
+		if err := token.Error(); err != nil {
+			klog.Fatalf("Subscribe topic %s error %v", t, err)
+		}
+		klog.V(4).Infof("Subscribe topic %s successfully", t)
+	}
+
 }
 
 func (l *LocalClient) Send(topic string, qos byte, retained bool, obj interface{}, timeout time.Duration) error {
@@ -43,6 +68,7 @@ func (l *LocalClient) Send(topic string, qos byte, retained bool, obj interface{
 	if err != nil {
 		return fmt.Errorf("Marshal object error %v", err)
 	}
+	klog.V(4).Infof("Prepare to send to topic %s, data:\n%s", topic, string(data))
 	token := l.send.Publish(topic, qos, retained, data)
 	out := token.WaitTimeout(timeout)
 	if !out {
@@ -86,7 +112,6 @@ func NewLocalClient(broker string, port int, clientid, username, passwd string) 
 
 	nodeIndexer := fileCache.NewFileObiectIndexer(fileCache.NewDefaultFileNodeDeps(manifest.GetNodesManifestPath()), false, nil)
 	leaseIndexer := fileCache.NewFileObiectIndexer(fileCache.NewDefaultFileLeaseDeps(manifest.GetLeasesManifestPath()), false, nil)
-	//podIndexer := fileCache.NewFileObiectIndexer(fileCache.NewDefaultFilePodDeps(manifest.GetPodsManifestPath(mqttManifestDir)), false, nil)
 	eventIndexer := fileCache.NewFileObiectIndexer(fileCache.NewDefaultFileEventDeps(manifest.GetEventsManifestPath()), false, nil)
 	c := NewMqttClient(broker, port, clientid, username, passwd)
 
@@ -94,10 +119,33 @@ func NewLocalClient(broker string, port int, clientid, username, passwd string) 
 		send:   c,
 		nodes:  nodeIndexer,
 		leases: leaseIndexer,
-		//pods:   podIndexer,
 		events: eventIndexer,
 	}
 	return l, nil
+}
+
+func saveMessageToObjectFile(message mqtt.Message, obj interface{}, objectManifestPath string) error {
+
+	if err := yaml.Unmarshal(message.Payload(), obj); err != nil {
+		return fmt.Errorf("unmarshal mqtt message error %v", err)
+	}
+	name, err := fileCache.CreateFileNameByNamespacedObject(obj)
+	if err != nil {
+		return fmt.Errorf("get object filename error %v", err)
+	}
+	filePath := filepath.Join(objectManifestPath, name)
+
+	// must use CREATE AND TRUNC
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	if err != nil {
+		return fmt.Errorf("openfile %s error %v", filePath, err)
+	}
+	defer file.Close()
+	write := bufio.NewWriter(file)
+	if _, err := write.Write(message.Payload()); err != nil {
+		return fmt.Errorf("write payload error %v", err)
+	}
+	return write.Flush()
 }
 
 var _ KubeletOperatorInterface = &LocalClient{}
