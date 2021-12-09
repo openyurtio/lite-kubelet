@@ -20,18 +20,31 @@ type NodesGetter interface {
 }
 
 type NodeInstance interface {
-	Topicor
+	PublishTopicor
 	Create(ctx context.Context, node *corev1.Node, opts v1.CreateOptions) (result *corev1.Node, err error)
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *corev1.Node, err error)
 	Get(ctx context.Context, name string, options v1.GetOptions) (result *corev1.Node, err error)
 }
 
 type nodes struct {
-	index  cache.Indexer
-	client MessageSendor
+	nodename string
+	index    cache.Indexer
+	client   MessageSendor
 }
 
-func (n *nodes) GetPreTopic() string {
+func (n *nodes) GetPublishCreateTopic(name string) string {
+	return filepath.Join(n.GetPublishPreTopic(), name, "create")
+}
+
+func (n *nodes) GetPublishUpdateTopic(name string) string {
+	return filepath.Join(n.GetPublishPreTopic(), name, "update")
+}
+
+func (n *nodes) GetPublishPatchTopic(name string) string {
+	return filepath.Join(n.GetPublishPreTopic(), name, "patch")
+}
+
+func (n *nodes) GetPublishPreTopic() string {
 	return filepath.Join(MqttEdgePublishRootTopic, "nodes")
 }
 
@@ -68,10 +81,11 @@ func (n *nodes) Get(ctx context.Context, name string, options v1.GetOptions) (re
 	return finnal, nil
 }
 
-func newNodes(index cache.Indexer, c MessageSendor) *nodes {
+func newNodes(nodename string, index cache.Indexer, c MessageSendor) *nodes {
 	return &nodes{
-		index:  index,
-		client: c,
+		nodename: nodename,
+		index:    index,
+		client:   c,
 	}
 }
 

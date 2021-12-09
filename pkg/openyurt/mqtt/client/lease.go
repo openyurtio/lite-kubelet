@@ -8,6 +8,7 @@ import (
 
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
@@ -19,19 +20,32 @@ type LeasesGetter interface {
 }
 
 type LeaseInstance interface {
-	Topicor
+	PublishTopicor
 	Get(ctx context.Context, name string, options metav1.GetOptions) (result *coordinationv1.Lease, err error)
 	Create(ctx context.Context, lease *coordinationv1.Lease, opts metav1.CreateOptions) (result *coordinationv1.Lease, err error)
 	Update(ctx context.Context, lease *coordinationv1.Lease, opts metav1.UpdateOptions) (result *coordinationv1.Lease, err error)
 }
 
 type leases struct {
+	nodename  string
 	namespace string
 	index     cache.Indexer
 	client    MessageSendor
 }
 
-func (l *leases) GetPreTopic() string {
+func (l *leases) GetPublishCreateTopic(name string) string {
+	return filepath.Join(l.GetPublishPreTopic(), name, "create")
+}
+
+func (l *leases) GetPublishUpdateTopic(name string) string {
+	return filepath.Join(l.GetPublishPreTopic(), name, "update")
+}
+
+func (l *leases) GetPublishPatchTopic(name string) string {
+	return filepath.Join(l.GetPublishPreTopic(), name, "patch")
+}
+
+func (l *leases) GetPublishPreTopic() string {
 	return filepath.Join(MqttEdgePublishRootTopic, "leases", l.namespace)
 }
 
@@ -62,16 +76,28 @@ func (l *leases) Get(ctx context.Context, name string, options metav1.GetOptions
 	return finnal, nil
 }
 
-func (l *leases) Create(ctx context.Context, lease *coordinationv1.Lease, opts metav1.CreateOptions) (result *coordinationv1.Lease, err error) {
-	createTopic := filepath.Join(l.GetPreTopic(), lease.GetName())
+func (l *leases) Create(ctx context.Context, lease *coordinationv1.Lease, opts metav1.CreateOptions) (*coordinationv1.Lease, error) {
 
-	if err := l.client.Send(createTopic, 1, false, lease, time.Second*5); err != nil {
+	createTopic := l.GetPublishCreateTopic(lease.GetName())
+	data := PublishCreateData(l.nodename, lease, opts)
+
+	if err := l.client.Send(createTopic, 1, false, data, time.Second*5); err != nil {
 		klog.Errorf("Publish lease[%s][%s] data error %v", lease.Namespace, lease.Name, err)
 		return nil, apierrors.NewInternalError(fmt.Errorf("Publish Lease data error %v", err))
 	}
+	ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity, time.Second*5)
+	if !ok {
+		return lease, errors.NewTimeoutError("lease", 5)
+	}
+	nl := &coordinationv1.Lease{}
+	errInfo, err := ackdata.UnmarshalPublishAckData(nl)
+	if err != nil {
+		klog.Errorf("publish ack data unmarshal error %v,data:\n%v", err, *ackdata)
+		return lease, errors.NewInternalError(err)
+	}
 
-	klog.Infof("###### Create lease[%s][%s] by topic[%s] successfully", lease.GetNamespace(), lease.GetName(), createTopic)
-	return lease, nil
+	klog.Infof("###### Create lease[%s][%s] by topic[%s]: finnal errorinfo %v", lease.GetNamespace(), lease.GetName(), createTopic, errInfo)
+	return nl, errInfo
 }
 
 func (l *leases) Update(ctx context.Context, lease *coordinationv1.Lease, opts metav1.UpdateOptions) (result *coordinationv1.Lease, err error) {
@@ -79,8 +105,9 @@ func (l *leases) Update(ctx context.Context, lease *coordinationv1.Lease, opts m
 	return lease, nil
 }
 
-func newLeases(namespace string, index cache.Indexer, c MessageSendor) *leases {
+func newLeases(nodename, namespace string, index cache.Indexer, c MessageSendor) *leases {
 	return &leases{
+		nodename:  nodename,
 		namespace: namespace,
 		index:     index,
 		client:    c,

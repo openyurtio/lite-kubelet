@@ -9,17 +9,12 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
-	coordinationv1 "k8s.io/api/coordination/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/openyurt/fileCache"
 	"k8s.io/kubernetes/pkg/openyurt/mqtt/manifest"
 	"sigs.k8s.io/yaml"
 )
-
-type Topicor interface {
-	GetPreTopic() string
-}
 
 // KubeletOperatorInterface is interface of mqttclient
 type KubeletOperatorInterface interface {
@@ -35,23 +30,19 @@ type MessageSendor interface {
 }
 
 type LocalClient struct {
-	send   mqtt.Client
-	nodes  cache.Indexer
-	leases cache.Indexer
-	events cache.Indexer
+	nodename string
+	send     mqtt.Client
+	nodes    cache.Indexer
+	leases   cache.Indexer
+	events   cache.Indexer
 }
 
 func (l *LocalClient) SubscribeTopics(nodename string) {
-	var subscribeMap = make(map[string]mqtt.MessageHandler)
 
-	// lease tpoic : /lite/cloud/leases/{nodename}
-	subscribeMap[filepath.Join(MqttCloudPublishRootTopic, "leases", nodename)] = func(client mqtt.Client, message mqtt.Message) {
-		if err := saveMessageToObjectFile(message, &coordinationv1.Lease{}, manifest.GetLeasesManifestPath()); err != nil {
-			klog.Errorf("Save message[topic %s] payload to lease manifest error %v", message.Topic(), err)
-		}
-	}
+	RegisterSubtopicor(nodename, &LeaseSubTopic{})
+	RegisterSubtopicor(nodename, &AckSubTopic{})
 
-	for t, f := range subscribeMap {
+	for t, f := range GetAllTopicFuncs() {
 		klog.V(4).Infof("Prepare subscribe topic %s", t)
 		token := l.send.Subscribe(t, 1, f)
 		token.Wait()
@@ -68,7 +59,7 @@ func (l *LocalClient) Send(topic string, qos byte, retained bool, obj interface{
 	if err != nil {
 		return fmt.Errorf("Marshal object error %v", err)
 	}
-	klog.V(4).Infof("Prepare to send to topic %s, data:\n%s", topic, string(data))
+	klog.V(4).Infof("###### Prepare to send to topic %s, data:\n%s", topic, string(data))
 	token := l.send.Publish(topic, qos, retained, data)
 	out := token.WaitTimeout(timeout)
 	if !out {
@@ -77,30 +68,31 @@ func (l *LocalClient) Send(topic string, qos byte, retained bool, obj interface{
 	if err := token.Error(); err != nil {
 		return fmt.Errorf("Publish data error %v", err)
 	}
+	klog.V(4).Infof("###### Send to topic %s, data successful", topic)
 	return nil
 }
 
 func (l *LocalClient) Pods(namespace string) PodInstance {
-	return newPods(namespace, l)
+	return newPods(l.nodename, namespace, l)
 }
 
 func (l *LocalClient) Nodes() NodeInstance {
-	return newNodes(l.nodes, l)
+	return newNodes(l.nodename, l.nodes, l)
 }
 
 func (l *LocalClient) Events(namespace string) EventInstance {
-	return newEvents(namespace, l.events, l)
+	return newEvents(l.nodename, namespace, l.events, l)
 }
 
 func (l *LocalClient) Leases(namespace string) LeaseInstance {
-	return newLeases(namespace, l.leases, l)
+	return newLeases(l.nodename, namespace, l.leases, l)
 }
 
 func (l *LocalClient) GetNodesIndexer() cache.Indexer {
 	return l.nodes
 }
 
-func NewLocalClient(broker string, port int, clientid, username, passwd string) (*LocalClient, error) {
+func NewLocalClient(nodename, broker string, port int, clientid, username, passwd string) (*LocalClient, error) {
 
 	klog.V(4).Infof("create mqtt client  broker[%v] port[%v] clientid[%v] username[%v], passwd[%v]",
 		broker, port, clientid, username, passwd)
@@ -116,10 +108,11 @@ func NewLocalClient(broker string, port int, clientid, username, passwd string) 
 	c := NewMqttClient(broker, port, clientid, username, passwd)
 
 	l := &LocalClient{
-		send:   c,
-		nodes:  nodeIndexer,
-		leases: leaseIndexer,
-		events: eventIndexer,
+		nodename: nodename,
+		send:     c,
+		nodes:    nodeIndexer,
+		leases:   leaseIndexer,
+		events:   eventIndexer,
 	}
 	return l, nil
 }

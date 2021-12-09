@@ -595,7 +595,9 @@ func run(ctx context.Context, s *options.KubeletServer, kubeDeps *kubelet.Depend
 	*/
 
 	case kubeDeps.KubeClient == nil, kubeDeps.EventClient == nil, kubeDeps.HeartbeatClient == nil:
-		lc, err := localclient.NewLocalClient(s.MqttBroker,
+		lc, err := localclient.NewLocalClient(
+			string(nodeName),
+			s.MqttBroker,
 			s.MqttBrokerPort,
 			s.MqttClientID,
 			s.MqttUserName,

@@ -13,6 +13,7 @@ import (
 // Edge publish 的topic
 const MqttEdgePublishRootTopic = "lite/edge/"
 const MqttCloudPublishRootTopic = "lite/cloud/"
+const MqttCloudAckRootTopic = "lite/ack/"
 
 var mqttclient_once sync.Once
 var mqttclient mqtt.Client

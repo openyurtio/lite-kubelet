@@ -17,18 +17,31 @@ type EventsGetter interface {
 }
 
 type EventInstance interface {
-	Topicor
+	PublishTopicor
 	Create(ctx context.Context, event *corev1.Event, opts v1.CreateOptions) (result *corev1.Event, err error)
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *corev1.Event, err error)
 }
 
 type events struct {
+	nodename  string
 	namespace string
 	index     cache.Indexer
 	client    MessageSendor
 }
 
-func (e *events) GetPreTopic() string {
+func (e *events) GetPublishCreateTopic(name string) string {
+	return filepath.Join(e.GetPublishPreTopic(), name, "create")
+}
+
+func (e *events) GetPublishUpdateTopic(name string) string {
+	return filepath.Join(e.GetPublishPreTopic(), name, "update")
+}
+
+func (e *events) GetPublishPatchTopic(name string) string {
+	return filepath.Join(e.GetPublishPreTopic(), name, "patch")
+}
+
+func (e *events) GetPublishPreTopic() string {
 	return filepath.Join(MqttEdgePublishRootTopic, "events", e.namespace)
 }
 
@@ -42,8 +55,9 @@ func (e *events) Patch(ctx context.Context, name string, pt types.PatchType, dat
 	return result, nil
 }
 
-func newEvents(namespace string, index cache.Indexer, c MessageSendor) *events {
+func newEvents(nodename, namespace string, index cache.Indexer, c MessageSendor) *events {
 	return &events{
+		nodename:  nodename,
 		namespace: namespace,
 		index:     index,
 		client:    c,
