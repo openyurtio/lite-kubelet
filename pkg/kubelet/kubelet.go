@@ -1485,15 +1485,17 @@ func (kl *Kubelet) Run(updates <-chan kubetypes.PodUpdate) {
 	// Start volume manager
 	go kl.volumeManager.Run(kl.sourcesReady, wait.NeverStop)
 
-	if kl.kubeClient != nil {
+	//if kl.kubeClient != nil {
+	// CHANGED BY zhangjie
+	if kl.heartbeatClient != nil {
 		// Start syncing node status immediately, this may set up things the runtime needs to run.
 		go wait.Until(kl.syncNodeStatus, kl.nodeStatusUpdateFrequency, wait.NeverStop)
-		go kl.fastStatusUpdateOnce()
 
 	}
 	if kl.heartbeatClient != nil {
 		// start syncing lease
 		go kl.nodeLeaseController.Run(wait.NeverStop)
+		go kl.fastStatusUpdateOnce()
 	}
 	go wait.Until(kl.updateRuntimeUp, 5*time.Second, wait.NeverStop)
 
@@ -2357,7 +2359,7 @@ func (kl *Kubelet) fastStatusUpdateOnce() {
 		time.Sleep(100 * time.Millisecond)
 		node, err := kl.GetNode()
 		if err != nil {
-			klog.Errorf(err.Error())
+			klog.Errorf("FasterStatusUpdateOnce get node error %v", err.Error())
 			continue
 		}
 		if len(node.Spec.PodCIDRs) != 0 {

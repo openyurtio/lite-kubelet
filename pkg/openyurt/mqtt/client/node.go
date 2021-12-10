@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"k8s.io/klog/v2"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
@@ -32,6 +34,10 @@ type nodes struct {
 	client   MessageSendor
 }
 
+func (n *nodes) GetPublishDeleteTopic(name string) string {
+	return filepath.Join(n.GetPublishPreTopic(), name, "delete")
+}
+
 func (n *nodes) GetPublishCreateTopic(name string) string {
 	return filepath.Join(n.GetPublishPreTopic(), name, "create")
 }
@@ -49,13 +55,51 @@ func (n *nodes) GetPublishPreTopic() string {
 }
 
 func (n *nodes) Create(ctx context.Context, node *corev1.Node, opts v1.CreateOptions) (result *corev1.Node, err error) {
-	klog.Warningf("implement me create node ")
-	return node, nil
+
+	createTopic := n.GetPublishCreateTopic(node.GetName())
+	data := PublishCreateData(n.nodename, node, opts)
+
+	if err := n.client.Send(createTopic, 1, false, data, time.Second*5); err != nil {
+		klog.Errorf("Publish create node[%s] data error %v", node.Name, err)
+		return nil, apierrors.NewInternalError(fmt.Errorf("Publish create node data error %v", err))
+	}
+	ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity, time.Second*5)
+	if !ok {
+		return node, errors.NewTimeoutError("lease", 5)
+	}
+	nl := &corev1.Node{}
+	errInfo, err := ackdata.UnmarshalPublishAckData(nl)
+	if err != nil {
+		klog.Errorf("publish ack data unmarshal error %v,data:\n%v", err, *ackdata)
+		return node, errors.NewInternalError(err)
+	}
+
+	klog.Infof("###### [%s] Create node [%s] by topic[%s]: finnal errorinfo %v", ackdata.Identity, node.GetName(), createTopic, errInfo)
+	return nl, errInfo
 }
 
 func (n *nodes) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *corev1.Node, err error) {
-	klog.Warningf("implement me patch node")
-	return nil, nil
+
+	patchTopic := n.GetPublishPatchTopic(name)
+	patchData := PublishPatchData(n.nodename, name, pt, data, opts, subresources...)
+
+	if err := n.client.Send(patchTopic, 1, false, patchData, time.Second*5); err != nil {
+		klog.Errorf("Publish patch node[%s] data error %v", name, err)
+		return nil, apierrors.NewInternalError(fmt.Errorf("Publish patch node data error %v", err))
+	}
+	ackdata, ok := GetDefaultTimeoutCache().Pop(patchData.Identity, time.Second*5)
+	if !ok {
+		return nil, errors.NewTimeoutError("lease", 5)
+	}
+	nl := &corev1.Node{}
+	errInfo, err := ackdata.UnmarshalPublishAckData(nl)
+	if err != nil {
+		klog.Errorf("publish ack data unmarshal error %v,data:\n%v", err, *ackdata)
+		return nil, errors.NewInternalError(err)
+	}
+
+	klog.Infof("###### Patch node [%s] by topic[%s]: finnal errorinfo %v", name, patchTopic, errInfo)
+	return nl, errInfo
 }
 
 func (n *nodes) Get(ctx context.Context, name string, options v1.GetOptions) (result *corev1.Node, err error) {

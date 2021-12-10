@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
 	"k8s.io/client-go/tools/cache"
@@ -26,7 +28,7 @@ type KubeletOperatorInterface interface {
 }
 
 type MessageSendor interface {
-	Send(topic string, qos byte, retained bool, obj interface{}, timeout time.Duration) error
+	Send(topic string, qos byte, retained bool, obj Identityor, timeout time.Duration) error
 }
 
 type LocalClient struct {
@@ -40,6 +42,7 @@ type LocalClient struct {
 func (l *LocalClient) SubscribeTopics(nodename string) {
 
 	RegisterSubtopicor(nodename, &LeaseSubTopic{})
+	RegisterSubtopicor(nodename, &NodeSubTopic{})
 	RegisterSubtopicor(nodename, &AckSubTopic{})
 
 	for t, f := range GetAllTopicFuncs() {
@@ -54,21 +57,21 @@ func (l *LocalClient) SubscribeTopics(nodename string) {
 
 }
 
-func (l *LocalClient) Send(topic string, qos byte, retained bool, obj interface{}, timeout time.Duration) error {
+func (l *LocalClient) Send(topic string, qos byte, retained bool, obj Identityor, timeout time.Duration) error {
 	data, err := yaml.Marshal(obj)
 	if err != nil {
 		return fmt.Errorf("Marshal object error %v", err)
 	}
-	klog.V(4).Infof("###### Prepare to send to topic %s, data:\n%s", topic, string(data))
+	klog.V(4).Infof("###### [%s] Prepare to send to topic %s, data:\n%s", obj.GetIdentity(), topic, string(data))
 	token := l.send.Publish(topic, qos, retained, data)
 	out := token.WaitTimeout(timeout)
 	if !out {
-		return fmt.Errorf("Publish data timeout")
+		return fmt.Errorf("[%s] Publish data timeout", obj.GetIdentity())
 	}
 	if err := token.Error(); err != nil {
-		return fmt.Errorf("Publish data error %v", err)
+		return fmt.Errorf("[%s] Publish data error %v", obj.GetIdentity(), err)
 	}
-	klog.V(4).Infof("###### Send to topic %s, data successful", topic)
+	klog.V(4).Infof("###### [%s] Send to topic %s, data successful", obj.GetIdentity(), topic)
 	return nil
 }
 
@@ -117,16 +120,29 @@ func NewLocalClient(nodename, broker string, port int, clientid, username, passw
 	return l, nil
 }
 
-func saveMessageToObjectFile(message mqtt.Message, obj interface{}, objectManifestPath string) error {
+func saveMessageToObjectFile(message mqtt.Message, obj metav1.Object, objectManifestPath string) error {
 
 	if err := yaml.Unmarshal(message.Payload(), obj); err != nil {
 		return fmt.Errorf("unmarshal mqtt message error %v", err)
 	}
+
 	name, err := fileCache.CreateFileNameByNamespacedObject(obj)
 	if err != nil {
 		return fmt.Errorf("get object filename error %v", err)
 	}
 	filePath := filepath.Join(objectManifestPath, name)
+
+	klog.V(4).Infof("Prepare to save object[topic %s] payload to localcache %s", message.Topic(), filePath)
+
+	if obj.GetDeletionTimestamp() != nil {
+		klog.Warningf("Find object[%v/%v] deletionTimestamp is not nil , need to delete localcachefile %s", obj.GetNamespace(), obj.GetName(), filePath)
+		err = os.RemoveAll(filePath)
+		if err != nil {
+			klog.Errorf("Remove cache file %s error %v", filePath, err)
+			return err
+		}
+		klog.Warningf("Delete localcache file %s succefully", filePath)
+	}
 
 	// must use CREATE AND TRUNC
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)

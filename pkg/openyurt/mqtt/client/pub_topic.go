@@ -5,4 +5,5 @@ type PublishTopicor interface {
 	GetPublishCreateTopic(name string) string
 	GetPublishUpdateTopic(name string) string
 	GetPublishPatchTopic(name string) string
+	GetPublishDeleteTopic(name string) string
 }

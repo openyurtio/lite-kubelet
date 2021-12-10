@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
+	"k8s.io/kubernetes/pkg/kubelet/apis"
 
 	"k8s.io/klog/v2"
 )
@@ -49,6 +50,11 @@ func SetNodeOwnerFunc(c clientset.Interface, nodeName string) func(lease *coordi
 				klog.Errorf("failed to get node %q when trying to set owner ref to the node lease: %v", nodeName, err)
 				return err
 			}
+		}
+		// ADD BY zhangjie, add label
+		if lease.Labels == nil {
+			lease.Labels = make(map[string]string)
+			lease.Labels[apis.LabelLite] = apis.LabelLiteValue
 		}
 		return nil
 	}

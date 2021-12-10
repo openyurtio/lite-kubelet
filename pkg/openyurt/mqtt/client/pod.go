@@ -28,6 +28,10 @@ type pods struct {
 	client    MessageSendor
 }
 
+func (p *pods) GetPublishDeleteTopic(name string) string {
+	return filepath.Join(p.GetPublishPreTopic(), name, "delete")
+}
+
 func (p *pods) GetPublishCreateTopic(name string) string {
 	return filepath.Join(p.GetPublishPreTopic(), name, "create")
 }

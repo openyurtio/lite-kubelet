@@ -83,7 +83,9 @@ func (kl *Kubelet) registerWithAPIServer() {
 // value of the annotation for controller-managed attach-detach of attachable
 // persistent volumes for the node.
 func (kl *Kubelet) tryRegisterWithAPIServer(node *v1.Node) bool {
-	_, err := kl.kubeClient.CoreV1().Nodes().Create(context.TODO(), node, metav1.CreateOptions{})
+	// CHANGE By zhanejie ,
+	_, err := kl.heartbeatClient.CoreV1().Nodes().Create(context.TODO(), node, metav1.CreateOptions{})
+	//	_, err := kl.kubeClient.CoreV1().Nodes().Create(context.TODO(), node, metav1.CreateOptions{})
 	if err == nil {
 		return true
 	}
@@ -93,7 +95,9 @@ func (kl *Kubelet) tryRegisterWithAPIServer(node *v1.Node) bool {
 		return false
 	}
 
-	existingNode, err := kl.kubeClient.CoreV1().Nodes().Get(context.TODO(), string(kl.nodeName), metav1.GetOptions{})
+	// CHANGED BY zhangjie
+	//existingNode, err := kl.kubeClient.CoreV1().Nodes().Get(context.TODO(), string(kl.nodeName), metav1.GetOptions{})
+	existingNode, err := kl.heartbeatClient.CoreV1().Nodes().Get(context.TODO(), string(kl.nodeName), metav1.GetOptions{})
 	if err != nil {
 		klog.Errorf("Unable to register node %q with API server: error getting existing node: %v", kl.nodeName, err)
 		return false
@@ -115,7 +119,9 @@ func (kl *Kubelet) tryRegisterWithAPIServer(node *v1.Node) bool {
 	requiresUpdate = kl.reconcileExtendedResource(node, existingNode) || requiresUpdate
 	requiresUpdate = kl.reconcileHugePageResource(node, existingNode) || requiresUpdate
 	if requiresUpdate {
-		if _, _, err := nodeutil.PatchNodeStatus(kl.kubeClient.CoreV1(), types.NodeName(kl.nodeName), originalNode, existingNode); err != nil {
+		// CHANGED BY zhangjie
+		if _, _, err := nodeutil.PatchNodeStatus(kl.heartbeatClient.CoreV1(), types.NodeName(kl.nodeName), originalNode, existingNode); err != nil {
+			//if _, _, err := nodeutil.PatchNodeStatus(kl.kubeClient.CoreV1(), types.NodeName(kl.nodeName), originalNode, existingNode); err != nil {
 			klog.Errorf("Unable to reconcile node %q with API server: error updating node: %v", kl.nodeName, err)
 			return false
 		}
@@ -293,6 +299,7 @@ func (kl *Kubelet) initialNode(ctx context.Context) (*v1.Node, error) {
 				v1.LabelArchStable:    goruntime.GOARCH,
 				kubeletapis.LabelOS:   goruntime.GOOS,
 				kubeletapis.LabelArch: goruntime.GOARCH,
+				kubeletapis.LabelLite: kubeletapis.LabelLiteValue,
 			},
 		},
 		Spec: v1.NodeSpec{
@@ -448,7 +455,7 @@ func (kl *Kubelet) syncNodeStatus() {
 	kl.syncNodeStatusMux.Lock()
 	defer kl.syncNodeStatusMux.Unlock()
 
-	if kl.kubeClient == nil || kl.heartbeatClient == nil {
+	if kl.heartbeatClient == nil {
 		return
 	}
 	if kl.registerNode {

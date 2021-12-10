@@ -3,12 +3,11 @@ package client
 import (
 	"path/filepath"
 
-	"k8s.io/kubernetes/pkg/openyurt/mqtt/manifest"
-
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
 	coordinationv1 "k8s.io/api/coordination/v1"
 	"k8s.io/klog/v2"
+	"k8s.io/kubernetes/pkg/openyurt/mqtt/manifest"
 )
 
 type LeaseSubTopic struct {

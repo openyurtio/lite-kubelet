@@ -267,7 +267,9 @@ func (kl *Kubelet) GetNode() (*v1.Node, error) {
 		klog.V(4).Infof("Get node info successfull from local cache %v", nodelocal)
 		return node, nil
 	*/
-	if kl.kubeClient == nil {
+	// CHANGED BY zhangjie
+	//if kl.kubeClient == nil {
+	if kl.heartbeatClient == nil {
 		return kl.initialNode(context.TODO())
 	}
 	// if we have a valid kube client, we wait for initial lister to sync

@@ -17,27 +17,27 @@ func NewManagerYurt() (Manager, lifecycle.PodAdmitHandler) {
 }
 
 func (y *yurtManagerImpl) Admit(attrs *lifecycle.PodAdmitAttributes) lifecycle.PodAdmitResult {
-	klog.V(5).Infof("implement me: yurtManagerImpl Admit")
+	klog.V(4).Infof("implement me: yurtManagerImpl Admit")
 	return lifecycle.PodAdmitResult{Admit: true}
 }
 
 func (y *yurtManagerImpl) Start(diskInfoProvider DiskInfoProvider, podFunc ActivePodsFunc, podCleanedUpFunc PodCleanedUpFunc, monitoringInterval time.Duration) {
-	klog.V(5).Infof("implement me: yurtManagerImpl Start")
+	klog.V(4).Infof("implement me: yurtManagerImpl Start")
 	return
 }
 
 func (y *yurtManagerImpl) IsUnderMemoryPressure() bool {
-	klog.V(5).Infof("implement me: yurtManagerImpl IsUnderMemoryPressure")
+	klog.V(4).Infof("implement me: yurtManagerImpl IsUnderMemoryPressure")
 	return true
 }
 
 func (y *yurtManagerImpl) IsUnderDiskPressure() bool {
-	klog.V(5).Infof("implement me: yurtManagerImpl IsUnderDiskPressure")
+	klog.V(4).Infof("implement me: yurtManagerImpl IsUnderDiskPressure")
 	return true
 }
 
 func (y *yurtManagerImpl) IsUnderPIDPressure() bool {
-	klog.V(5).Infof("implement me: yurtManagerImpl IsUnderPIDPressure")
+	klog.V(4).Infof("implement me: yurtManagerImpl IsUnderPIDPressure")
 	return true
 }
 

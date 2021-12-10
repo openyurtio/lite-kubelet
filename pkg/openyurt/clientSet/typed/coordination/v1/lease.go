@@ -28,5 +28,5 @@ func (c *FakeLeases) Create(ctx context.Context, lease *coordinationv1.Lease, op
 
 // Update takes the representation of a lease and updates it. Returns the server's representation of the lease, and an error, if there is any.
 func (c *FakeLeases) Update(ctx context.Context, lease *coordinationv1.Lease, opts v1.UpdateOptions) (result *coordinationv1.Lease, err error) {
-	panic("need to implement: lease update")
+	return c.LocalClient.Leases(c.ns).Update(ctx, lease, opts)
 }

@@ -5,7 +5,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/klog/v2"
@@ -20,13 +19,22 @@ const (
 	ErrorTypeNil
 )
 
+type Identityor interface {
+	GetIdentity() string
+}
 type PublishData struct {
+	ObjectName        string          `json:"object_name,omitempty"`
 	Object            interface{}     `json:"object,omitempty"`
 	Options           interface{}     `json:"options,omitempty"`
 	Identity          string          `json:"identity,omitempty"`
 	PatchType         types.PatchType `json:"patch_type,omitempty"`
+	PatchData         []byte          `json:"patch_data,omitempty"`
 	PatchSubResources []string        `json:"patch_sub_resources,omitempty"`
 	NodeName          string          `json:"node_name,omitempty"`
+}
+
+func (p *PublishData) GetIdentity() string {
+	return p.Identity
 }
 
 type PublishAckData struct {
@@ -36,13 +44,22 @@ type PublishAckData struct {
 	ErrorType ErrorType   `json:"error_type,omitempty"`
 }
 
-func newPublishData(nodename string, obj runtime.Object, options interface{}, pathType types.PatchType, subresources []string) *PublishData {
+func (p *PublishAckData) GetIdentity() string {
+	return p.Identity
+}
+
+var _ Identityor = &PublishData{}
+var _ Identityor = &PublishAckData{}
+
+func newPublishData(nodename, objectName string, obj metav1.Object, options interface{}, pathType types.PatchType, patchData []byte, subresources []string) *PublishData {
 	return &PublishData{
+		ObjectName:        objectName,
 		NodeName:          nodename,
 		Object:            obj,
 		Options:           options,
 		Identity:          string(uuid.NewUUID()),
 		PatchType:         pathType,
+		PatchData:         patchData,
 		PatchSubResources: subresources,
 	}
 }
@@ -92,18 +109,18 @@ func (data *PublishAckData) UnmarshalPublishAckData(k8sobj interface{}) (error, 
 	}
 }
 
-func PublishCreateData(nodename string, object runtime.Object, options metav1.CreateOptions) *PublishData {
-	return newPublishData(nodename, object, options, "", nil)
+func PublishCreateData(nodename string, object metav1.Object, options metav1.CreateOptions) *PublishData {
+	return newPublishData(nodename, object.GetName(), object, options, "", nil, nil)
 }
 
 func PublishDeleteData(nodename, name string, options metav1.DeleteOptions) *PublishData {
-	panic("implement me")
+	return newPublishData(nodename, name, nil, options, "", nil, nil)
 }
 
-func PublishPatchData(nodename, name string, patchType types.PatchType, bytes []byte, options metav1.PatchOptions, s2 ...string) *PublishData {
-	panic("implement me")
+func PublishPatchData(nodename, name string, patchType types.PatchType, patchData []byte, options metav1.PatchOptions, subresources ...string) *PublishData {
+	return newPublishData(nodename, name, nil, options, patchType, patchData, subresources)
 }
 
-func PublishUpdateData(nodename string, object runtime.Object, options metav1.UpdateOptions) *PublishData {
-	panic("implement me")
+func PublishUpdateData(nodename string, object metav1.Object, options metav1.UpdateOptions) *PublishData {
+	return newPublishData(nodename, object.GetName(), object, options, "", nil, nil)
 }

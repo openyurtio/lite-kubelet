@@ -18,12 +18,12 @@ type FakeNodes struct {
 
 // Create takes the representation of a node and creates it.  Returns the server's representation of the node, and an error, if there is any.
 func (c *FakeNodes) Create(ctx context.Context, node *corev1.Node, opts metav1.CreateOptions) (result *corev1.Node, err error) {
-	panic("need to implement: node create")
+	return c.LocalClient.Nodes().Create(ctx, node, opts)
 }
 
 // Patch applies the patch and returns the patched node.
 func (c *FakeNodes) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *corev1.Node, err error) {
-	panic("need to implement: node patch")
+	return c.LocalClient.Nodes().Patch(ctx, name, pt, data, opts, subresources...)
 }
 
 func (c *FakeNodes) Get(ctx context.Context, name string, opts metav1.GetOptions) (*corev1.Node, error) {

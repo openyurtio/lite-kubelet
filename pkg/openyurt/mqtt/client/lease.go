@@ -33,6 +33,10 @@ type leases struct {
 	client    MessageSendor
 }
 
+func (l *leases) GetPublishDeleteTopic(name string) string {
+	return filepath.Join(l.GetPublishPreTopic(), name, "delete")
+}
+
 func (l *leases) GetPublishCreateTopic(name string) string {
 	return filepath.Join(l.GetPublishPreTopic(), name, "create")
 }
@@ -82,8 +86,8 @@ func (l *leases) Create(ctx context.Context, lease *coordinationv1.Lease, opts m
 	data := PublishCreateData(l.nodename, lease, opts)
 
 	if err := l.client.Send(createTopic, 1, false, data, time.Second*5); err != nil {
-		klog.Errorf("Publish lease[%s][%s] data error %v", lease.Namespace, lease.Name, err)
-		return nil, apierrors.NewInternalError(fmt.Errorf("Publish Lease data error %v", err))
+		klog.Errorf("Publish create lease[%s][%s] data error %v", lease.Namespace, lease.Name, err)
+		return nil, apierrors.NewInternalError(fmt.Errorf("Publish create lease data error %v", err))
 	}
 	ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity, time.Second*5)
 	if !ok {
@@ -92,7 +96,7 @@ func (l *leases) Create(ctx context.Context, lease *coordinationv1.Lease, opts m
 	nl := &coordinationv1.Lease{}
 	errInfo, err := ackdata.UnmarshalPublishAckData(nl)
 	if err != nil {
-		klog.Errorf("publish ack data unmarshal error %v,data:\n%v", err, *ackdata)
+		klog.Errorf("ack data unmarshal error %v,data:\n%v", err, *ackdata)
 		return lease, errors.NewInternalError(err)
 	}
 
@@ -101,8 +105,26 @@ func (l *leases) Create(ctx context.Context, lease *coordinationv1.Lease, opts m
 }
 
 func (l *leases) Update(ctx context.Context, lease *coordinationv1.Lease, opts metav1.UpdateOptions) (result *coordinationv1.Lease, err error) {
-	klog.Warningf("implement me: update lease ")
-	return lease, nil
+	updateTopic := l.GetPublishUpdateTopic(lease.GetName())
+	data := PublishUpdateData(l.nodename, lease, opts)
+
+	if err := l.client.Send(updateTopic, 1, false, data, time.Second*5); err != nil {
+		klog.Errorf("Publish update lease[%s][%s] data error %v", lease.Namespace, lease.Name, err)
+		return nil, apierrors.NewInternalError(fmt.Errorf("Publish update lease data error %v", err))
+	}
+	ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity, time.Second*5)
+	if !ok {
+		return lease, errors.NewTimeoutError("lease", 5)
+	}
+	nl := &coordinationv1.Lease{}
+	errInfo, err := ackdata.UnmarshalPublishAckData(nl)
+	if err != nil {
+		klog.Errorf("ack data unmarshal error %v,data:\n%v", err, *ackdata)
+		return lease, errors.NewInternalError(err)
+	}
+
+	klog.Infof("###### Update lease[%s][%s] by topic[%s]: finnal errorinfo %v", lease.GetNamespace(), lease.GetName(), updateTopic, errInfo)
+	return nl, errInfo
 }
 
 func newLeases(nodename, namespace string, index cache.Indexer, c MessageSendor) *leases {

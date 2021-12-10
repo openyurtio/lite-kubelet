@@ -30,6 +30,10 @@ const (
 	// LabelArch is a label to indicate the architecture of the node.
 	// The Arch labels are promoted to GA in 1.14. kubelet applies GA labels and stop applying the beta Arch labels in Kubernetes 1.19.
 	LabelArch = "beta.kubernetes.io/arch"
+
+	// ADDED by zhangjie
+	LabelLite      = "openyurt.io/type"
+	LabelLiteValue = "lite-node"
 )
 
 var kubeletLabels = sets.NewString(
@@ -45,6 +49,7 @@ var kubeletLabels = sets.NewString(
 
 	LabelOS,
 	LabelArch,
+	LabelLite,
 )
 
 var kubeletLabelNamespaces = sets.NewString(
