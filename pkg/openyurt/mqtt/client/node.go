@@ -65,7 +65,8 @@ func (n *nodes) Create(ctx context.Context, node *corev1.Node, opts v1.CreateOpt
 	}
 	ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity, time.Second*5)
 	if !ok {
-		return node, errors.NewTimeoutError("lease", 5)
+		klog.Errorf("Get ack data[Indentify %s] from timeout cache timeout, when create node", data.Identity)
+		return node, errors.NewTimeoutError("node", 5)
 	}
 	nl := &corev1.Node{}
 	errInfo, err := ackdata.UnmarshalPublishAckData(nl)
@@ -79,7 +80,6 @@ func (n *nodes) Create(ctx context.Context, node *corev1.Node, opts v1.CreateOpt
 }
 
 func (n *nodes) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *corev1.Node, err error) {
-
 	patchTopic := n.GetPublishPatchTopic(name)
 	patchData := PublishPatchData(n.nodename, name, pt, data, opts, subresources...)
 
@@ -89,7 +89,8 @@ func (n *nodes) Patch(ctx context.Context, name string, pt types.PatchType, data
 	}
 	ackdata, ok := GetDefaultTimeoutCache().Pop(patchData.Identity, time.Second*5)
 	if !ok {
-		return nil, errors.NewTimeoutError("lease", 5)
+		klog.Errorf("Get ack data[Indentify %s] from timeout cache timeout, when patch node", patchData.Identity)
+		return nil, errors.NewTimeoutError("node", 5)
 	}
 	nl := &corev1.Node{}
 	errInfo, err := ackdata.UnmarshalPublishAckData(nl)

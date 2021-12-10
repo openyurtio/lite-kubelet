@@ -518,9 +518,12 @@ func ReadyCondition(
 		}
 		errs := []error{runtimeErrorsFunc(), networkErrorsFunc(), storageErrorsFunc(), nodeShutdownManagerErrorsFunc()}
 		requiredCapacities := []v1.ResourceName{v1.ResourceCPU, v1.ResourceMemory, v1.ResourcePods}
-		if utilfeature.DefaultFeatureGate.Enabled(features.LocalStorageCapacityIsolation) {
-			requiredCapacities = append(requiredCapacities, v1.ResourceEphemeralStorage)
-		}
+		// DELETED BY zhangjie
+		/*
+			if utilfeature.DefaultFeatureGate.Enabled(features.LocalStorageCapacityIsolation) {
+				requiredCapacities = append(requiredCapacities, v1.ResourceEphemeralStorage)
+			}
+		*/
 		missingCapacities := []string{}
 		for _, resource := range requiredCapacities {
 			if _, found := node.Status.Capacity[resource]; !found {

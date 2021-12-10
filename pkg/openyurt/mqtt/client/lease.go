@@ -91,6 +91,7 @@ func (l *leases) Create(ctx context.Context, lease *coordinationv1.Lease, opts m
 	}
 	ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity, time.Second*5)
 	if !ok {
+		klog.Errorf("Get ack data[Indentify %s] from timeoutcache timeout  when create lease", data.Identity)
 		return lease, errors.NewTimeoutError("lease", 5)
 	}
 	nl := &coordinationv1.Lease{}
@@ -114,6 +115,7 @@ func (l *leases) Update(ctx context.Context, lease *coordinationv1.Lease, opts m
 	}
 	ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity, time.Second*5)
 	if !ok {
+		klog.Errorf("Get ack data[Indentify %s] from timeoutcache timeout  when update lease", data.Identity)
 		return lease, errors.NewTimeoutError("lease", 5)
 	}
 	nl := &coordinationv1.Lease{}

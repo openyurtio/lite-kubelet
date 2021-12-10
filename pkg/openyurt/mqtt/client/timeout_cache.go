@@ -18,7 +18,7 @@ type cacheData struct {
 var timecache *TimeoutCache
 
 func init() {
-	timecache = NewTimeoutCache(5, 10)
+	timecache = NewTimeoutCache(time.Second*5, time.Hour*6)
 }
 
 func GetDefaultTimeoutCache() *TimeoutCache {

@@ -28,17 +28,17 @@ func (y *yurtManagerImpl) Start(diskInfoProvider DiskInfoProvider, podFunc Activ
 
 func (y *yurtManagerImpl) IsUnderMemoryPressure() bool {
 	klog.V(4).Infof("implement me: yurtManagerImpl IsUnderMemoryPressure")
-	return true
+	return false
 }
 
 func (y *yurtManagerImpl) IsUnderDiskPressure() bool {
 	klog.V(4).Infof("implement me: yurtManagerImpl IsUnderDiskPressure")
-	return true
+	return false
 }
 
 func (y *yurtManagerImpl) IsUnderPIDPressure() bool {
 	klog.V(4).Infof("implement me: yurtManagerImpl IsUnderPIDPressure")
-	return true
+	return false
 }
 
 // ensure it implements the required interface

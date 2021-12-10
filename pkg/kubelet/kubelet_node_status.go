@@ -470,7 +470,7 @@ func (kl *Kubelet) syncNodeStatus() {
 // updateNodeStatus updates node status to master with retries if there is any
 // change or enough time passed from the last sync.
 func (kl *Kubelet) updateNodeStatus() error {
-	klog.V(5).Infof("Updating node status")
+	klog.V(4).Infof("Updating node status")
 	for i := 0; i < nodeStatusUpdateRetry; i++ {
 		if err := kl.tryUpdateNodeStatus(i); err != nil {
 			if i > 0 && kl.onRepeatedHeartbeatFailure != nil {
