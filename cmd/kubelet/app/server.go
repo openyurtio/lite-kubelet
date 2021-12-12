@@ -609,6 +609,8 @@ func run(ctx context.Context, s *options.KubeletServer, kubeDeps *kubelet.Depend
 		lc.SubscribeTopics(string(nodeName))
 		kubeDeps.NodesIndexer = lc.GetNodesIndexer()
 		kubeDeps.HeartbeatClient = yurtclientset.NewSimpleClientset(lc)
+		kubeDeps.KubeClient = kubeDeps.HeartbeatClient
+		kubeDeps.EventClient = kubeDeps.HeartbeatClient
 
 		//kubeDeps.KubeClient = yurtclientset.NewSimpleClientset(nil)
 		// DELETE BY zhangjie

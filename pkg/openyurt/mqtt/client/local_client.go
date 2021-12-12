@@ -36,6 +36,7 @@ type LocalClient struct {
 	send     mqtt.Client
 	nodes    cache.Indexer
 	leases   cache.Indexer
+	pods     cache.Indexer
 	events   cache.Indexer
 }
 
@@ -76,7 +77,7 @@ func (l *LocalClient) Send(topic string, qos byte, retained bool, obj Identityor
 }
 
 func (l *LocalClient) Pods(namespace string) PodInstance {
-	return newPods(l.nodename, namespace, l)
+	return newPods(l.nodename, namespace, l.pods, l)
 }
 
 func (l *LocalClient) Nodes() NodeInstance {
@@ -108,6 +109,7 @@ func NewLocalClient(nodename, broker string, port int, clientid, username, passw
 	nodeIndexer := fileCache.NewFileObiectIndexer(fileCache.NewDefaultFileNodeDeps(manifest.GetNodesManifestPath()), false, nil)
 	leaseIndexer := fileCache.NewFileObiectIndexer(fileCache.NewDefaultFileLeaseDeps(manifest.GetLeasesManifestPath()), false, nil)
 	eventIndexer := fileCache.NewFileObiectIndexer(fileCache.NewDefaultFileEventDeps(manifest.GetEventsManifestPath()), false, nil)
+	podsIndexer := fileCache.NewFileObiectIndexer(fileCache.NewDefaultFilePodDeps(manifest.GetPodsManifestPath()), false, nil)
 	c := NewMqttClient(broker, port, clientid, username, passwd)
 
 	l := &LocalClient{
@@ -116,6 +118,7 @@ func NewLocalClient(nodename, broker string, port int, clientid, username, passw
 		nodes:    nodeIndexer,
 		leases:   leaseIndexer,
 		events:   eventIndexer,
+		pods:     podsIndexer,
 	}
 	return l, nil
 }

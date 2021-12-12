@@ -87,11 +87,11 @@ func (l *leases) Create(ctx context.Context, lease *coordinationv1.Lease, opts m
 
 	if err := l.client.Send(createTopic, 1, false, data, time.Second*5); err != nil {
 		klog.Errorf("Publish create lease[%s][%s] data error %v", lease.Namespace, lease.Name, err)
-		return nil, apierrors.NewInternalError(fmt.Errorf("Publish create lease data error %v", err))
+		return nil, apierrors.NewInternalError(fmt.Errorf("publish create lease data error %v", err))
 	}
 	ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity, time.Second*5)
 	if !ok {
-		klog.Errorf("Get ack data[Indentify %s] from timeoutcache timeout  when create lease", data.Identity)
+		klog.Errorf("Get ack data[%s] from timeoutCache timeout  when create lease", data.Identity)
 		return lease, errors.NewTimeoutError("lease", 5)
 	}
 	nl := &coordinationv1.Lease{}
@@ -101,7 +101,7 @@ func (l *leases) Create(ctx context.Context, lease *coordinationv1.Lease, opts m
 		return lease, errors.NewInternalError(err)
 	}
 
-	klog.Infof("###### Create lease[%s][%s] by topic[%s]: finnal errorinfo %v", lease.GetNamespace(), lease.GetName(), createTopic, errInfo)
+	klog.Infof("###### Create lease[%s][%s] by topic[%s]: errorInfo %v", lease.GetNamespace(), lease.GetName(), createTopic, errInfo)
 	return nl, errInfo
 }
 
@@ -111,11 +111,11 @@ func (l *leases) Update(ctx context.Context, lease *coordinationv1.Lease, opts m
 
 	if err := l.client.Send(updateTopic, 1, false, data, time.Second*5); err != nil {
 		klog.Errorf("Publish update lease[%s][%s] data error %v", lease.Namespace, lease.Name, err)
-		return nil, apierrors.NewInternalError(fmt.Errorf("Publish update lease data error %v", err))
+		return nil, apierrors.NewInternalError(fmt.Errorf("publish update lease data error %v", err))
 	}
 	ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity, time.Second*5)
 	if !ok {
-		klog.Errorf("Get ack data[Indentify %s] from timeoutcache timeout  when update lease", data.Identity)
+		klog.Errorf("Get ack data[%s] from timeoutCache timeout  when update lease", data.Identity)
 		return lease, errors.NewTimeoutError("lease", 5)
 	}
 	nl := &coordinationv1.Lease{}
@@ -125,7 +125,7 @@ func (l *leases) Update(ctx context.Context, lease *coordinationv1.Lease, opts m
 		return lease, errors.NewInternalError(err)
 	}
 
-	klog.Infof("###### Update lease[%s][%s] by topic[%s]: finnal errorinfo %v", lease.GetNamespace(), lease.GetName(), updateTopic, errInfo)
+	klog.Infof("###### Update lease[%s][%s] by topic[%s]: errorInfo %v", lease.GetNamespace(), lease.GetName(), updateTopic, errInfo)
 	return nl, errInfo
 }
 

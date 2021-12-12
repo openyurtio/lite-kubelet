@@ -24,6 +24,7 @@ type Identityor interface {
 }
 type PublishData struct {
 	ObjectName        string          `json:"object_name,omitempty"`
+	ObjectNS          string          `json:"object_ns,omitempty"`
 	Object            interface{}     `json:"object,omitempty"`
 	Options           interface{}     `json:"options,omitempty"`
 	Identity          string          `json:"identity,omitempty"`
@@ -51,9 +52,21 @@ func (p *PublishAckData) GetIdentity() string {
 var _ Identityor = &PublishData{}
 var _ Identityor = &PublishAckData{}
 
-func newPublishData(nodename, objectName string, obj metav1.Object, options interface{}, pathType types.PatchType, patchData []byte, subresources []string) *PublishData {
-	return &PublishData{
-		ObjectName:        objectName,
+func newPublishData(nodename, objectName, objectNs string, obj metav1.Object, options interface{}, pathType types.PatchType, patchData []byte, subresources []string) *PublishData {
+	var name, ns string
+	if obj != nil {
+		name = obj.GetName()
+		ns = obj.GetNamespace()
+	}
+	if len(objectName) != 0 {
+		name = objectName
+	}
+	if len(objectNs) != 0 {
+		ns = objectNs
+	}
+	data := &PublishData{
+		ObjectName:        name,
+		ObjectNS:          ns,
 		NodeName:          nodename,
 		Object:            obj,
 		Options:           options,
@@ -62,6 +75,7 @@ func newPublishData(nodename, objectName string, obj metav1.Object, options inte
 		PatchData:         patchData,
 		PatchSubResources: subresources,
 	}
+	return data
 }
 
 func UnmarshalPayloadToPublishAckData(payload []byte) (*PublishAckData, error) {
@@ -110,17 +124,17 @@ func (data *PublishAckData) UnmarshalPublishAckData(k8sobj interface{}) (error, 
 }
 
 func PublishCreateData(nodename string, object metav1.Object, options metav1.CreateOptions) *PublishData {
-	return newPublishData(nodename, object.GetName(), object, options, "", nil, nil)
+	return newPublishData(nodename, object.GetName(), object.GetNamespace(), object, options, "", nil, nil)
 }
 
-func PublishDeleteData(nodename, name string, options metav1.DeleteOptions) *PublishData {
-	return newPublishData(nodename, name, nil, options, "", nil, nil)
+func PublishDeleteData(nodename, name, ns string, options metav1.DeleteOptions) *PublishData {
+	return newPublishData(nodename, name, ns, nil, options, "", nil, nil)
 }
 
-func PublishPatchData(nodename, name string, patchType types.PatchType, patchData []byte, options metav1.PatchOptions, subresources ...string) *PublishData {
-	return newPublishData(nodename, name, nil, options, patchType, patchData, subresources)
+func PublishPatchData(nodename, name, ns string, object metav1.Object, patchType types.PatchType, patchData []byte, options metav1.PatchOptions, subresources ...string) *PublishData {
+	return newPublishData(nodename, name, ns, object, options, patchType, patchData, subresources)
 }
 
 func PublishUpdateData(nodename string, object metav1.Object, options metav1.UpdateOptions) *PublishData {
-	return newPublishData(nodename, object.GetName(), object, options, "", nil, nil)
+	return newPublishData(nodename, object.GetName(), object.GetNamespace(), object, options, "", nil, nil)
 }

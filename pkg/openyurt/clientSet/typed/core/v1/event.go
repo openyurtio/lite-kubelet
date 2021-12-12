@@ -1,11 +1,7 @@
 package v1
 
 import (
-	"context"
-
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
 	"k8s.io/kubernetes/pkg/openyurt/mqtt/client"
 )
@@ -17,12 +13,15 @@ type FakeEvents struct {
 	ns string
 }
 
-// Create takes the representation of a event and creates it.  Returns the server's representation of the event, and an error, if there is any.
-func (c *FakeEvents) Create(ctx context.Context, event *corev1.Event, opts v1.CreateOptions) (result *corev1.Event, err error) {
-	panic("need to implement: events create")
+func (c *FakeEvents) CreateWithEventNamespace(event *corev1.Event) (*corev1.Event, error) {
+	return c.LocalClient.Events(c.ns).CreateWithEventNamespace(event)
 }
 
-// Patch applies the patch and returns the patched event.
-func (c *FakeEvents) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *corev1.Event, err error) {
-	panic("need to implement: event patch")
+// UpdateWithEventNamespace is the same as a Update, except that it sends the request to the event.Namespace.
+func (c *FakeEvents) UpdateWithEventNamespace(event *corev1.Event) (*corev1.Event, error) {
+	return c.LocalClient.Events(c.ns).UpdateWithEventNamespace(event)
+
+}
+func (c *FakeEvents) PatchWithEventNamespace(event *corev1.Event, data []byte) (*corev1.Event, error) {
+	return c.LocalClient.Events(c.ns).PatchWithEventNamespace(event, data)
 }

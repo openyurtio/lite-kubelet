@@ -1,15 +1,17 @@
 package client
 
 import (
-	"context"
+	"fmt"
 	"path/filepath"
+	"time"
 
-	"k8s.io/klog/v2"
+	"k8s.io/apimachinery/pkg/types"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/klog/v2"
 )
 
 type EventsGetter interface {
@@ -18,8 +20,9 @@ type EventsGetter interface {
 
 type EventInstance interface {
 	PublishTopicor
-	Create(ctx context.Context, event *corev1.Event, opts v1.CreateOptions) (result *corev1.Event, err error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *corev1.Event, err error)
+	CreateWithEventNamespace(event *corev1.Event) (*corev1.Event, error)
+	UpdateWithEventNamespace(event *corev1.Event) (*corev1.Event, error)
+	PatchWithEventNamespace(event *corev1.Event, data []byte) (*corev1.Event, error)
 }
 
 type events struct {
@@ -49,14 +52,58 @@ func (e *events) GetPublishPreTopic() string {
 	return filepath.Join(MqttEdgePublishRootTopic, "events", e.namespace)
 }
 
-func (e *events) Create(ctx context.Context, event *corev1.Event, opts v1.CreateOptions) (result *corev1.Event, err error) {
-	klog.Warningf("implement me: create event %++v", *event)
+func (e *events) CreateWithEventNamespace(event *corev1.Event) (*corev1.Event, error) {
+	createTopic := e.GetPublishCreateTopic(event.GetName())
+	data := PublishCreateData(e.nodename, event, metav1.CreateOptions{})
+
+	if err := e.client.Send(createTopic, 1, false, data, time.Second*5); err != nil {
+		klog.Errorf("Publish create event[%s][%s] data error %v", event.Namespace, event.Name, err)
+		return nil, apierrors.NewInternalError(fmt.Errorf("publish create event data error %v", err))
+	}
+	// Do not deal with ack
+	/*
+		ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity, time.Second*2)
+		if !ok {
+			klog.Errorf("Get ack data[%s] from timeoutCache timeout  when create event", data.Identity)
+			return event, errors.NewTimeoutError("lease", 2)
+		}
+		nl := &corev1.Event{}
+		errInfo, err := ackdata.UnmarshalPublishAckData(nl)
+		if err != nil {
+			klog.Errorf("ack data unmarshal error %v,data:\n%v", err, *ackdata)
+			return event, errors.NewInternalError(err)
+		}
+
+		klog.Infof("###### Create event[%s][%s] by topic[%s]: errorInfo %v",
+			event.GetNamespace(), event.GetName(), createTopic, errInfo)
+		return nl, errInfo
+	*/
 	return event, nil
 }
 
-func (e *events) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *corev1.Event, err error) {
-	klog.Warningf("implement me: patch event %++v", string(data))
-	return result, nil
+func (e *events) UpdateWithEventNamespace(event *corev1.Event) (*corev1.Event, error) {
+	updateTopic := e.GetPublishUpdateTopic(event.GetName())
+	data := PublishUpdateData(e.nodename, event, metav1.UpdateOptions{})
+
+	if err := e.client.Send(updateTopic, 1, false, data, time.Second*5); err != nil {
+		klog.Errorf("Publish update event[%s][%s] data error %v", event.Namespace, event.Name, err)
+		return nil, apierrors.NewInternalError(fmt.Errorf("publish update event data error %v", err))
+	}
+	// do not dealwith ack
+	return event, nil
+}
+
+func (e *events) PatchWithEventNamespace(event *corev1.Event, data []byte) (*corev1.Event, error) {
+	patchTopic := e.GetPublishPatchTopic(event.GetName())
+	pathData := PublishPatchData(e.nodename, event.GetName(), event.GetNamespace(),
+		event, types.StrategicMergePatchType, data, metav1.PatchOptions{})
+
+	if err := e.client.Send(patchTopic, 1, false, pathData, time.Second*5); err != nil {
+		klog.Errorf("Publish patch event[%s][%s] data error %v", event.Namespace, event.Name, err)
+		return nil, apierrors.NewInternalError(fmt.Errorf("publish patch event data error %v", err))
+	}
+	// do not dealwith ack
+	return event, nil
 }
 
 func newEvents(nodename, namespace string, index cache.Indexer, c MessageSendor) *events {

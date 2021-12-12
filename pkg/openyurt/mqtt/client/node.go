@@ -61,11 +61,11 @@ func (n *nodes) Create(ctx context.Context, node *corev1.Node, opts v1.CreateOpt
 
 	if err := n.client.Send(createTopic, 1, false, data, time.Second*5); err != nil {
 		klog.Errorf("Publish create node[%s] data error %v", node.Name, err)
-		return nil, apierrors.NewInternalError(fmt.Errorf("Publish create node data error %v", err))
+		return nil, apierrors.NewInternalError(fmt.Errorf("publish create node data error %v", err))
 	}
 	ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity, time.Second*5)
 	if !ok {
-		klog.Errorf("Get ack data[Indentify %s] from timeout cache timeout, when create node", data.Identity)
+		klog.Errorf("Get ack data[%s] from timeout cache timeout, when create node", data.Identity)
 		return node, errors.NewTimeoutError("node", 5)
 	}
 	nl := &corev1.Node{}
@@ -75,21 +75,21 @@ func (n *nodes) Create(ctx context.Context, node *corev1.Node, opts v1.CreateOpt
 		return node, errors.NewInternalError(err)
 	}
 
-	klog.Infof("###### [%s] Create node [%s] by topic[%s]: finnal errorinfo %v", ackdata.Identity, node.GetName(), createTopic, errInfo)
+	klog.Infof("###### [%s] Create node [%s] by topic[%s]: errorInfo %v", ackdata.Identity, node.GetName(), createTopic, errInfo)
 	return nl, errInfo
 }
 
 func (n *nodes) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *corev1.Node, err error) {
 	patchTopic := n.GetPublishPatchTopic(name)
-	patchData := PublishPatchData(n.nodename, name, pt, data, opts, subresources...)
+	patchData := PublishPatchData(n.nodename, name, "", nil, pt, data, opts, subresources...)
 
 	if err := n.client.Send(patchTopic, 1, false, patchData, time.Second*5); err != nil {
 		klog.Errorf("Publish patch node[%s] data error %v", name, err)
-		return nil, apierrors.NewInternalError(fmt.Errorf("Publish patch node data error %v", err))
+		return nil, apierrors.NewInternalError(fmt.Errorf("publish patch node data error %v", err))
 	}
 	ackdata, ok := GetDefaultTimeoutCache().Pop(patchData.Identity, time.Second*5)
 	if !ok {
-		klog.Errorf("Get ack data[Indentify %s] from timeout cache timeout, when patch node", patchData.Identity)
+		klog.Errorf("Get ack data[%s] from timeout cache timeout, when patch node", patchData.Identity)
 		return nil, errors.NewTimeoutError("node", 5)
 	}
 	nl := &corev1.Node{}
@@ -99,7 +99,7 @@ func (n *nodes) Patch(ctx context.Context, name string, pt types.PatchType, data
 		return nil, errors.NewInternalError(err)
 	}
 
-	klog.Infof("###### Patch node [%s] by topic[%s]: finnal errorinfo %v", name, patchTopic, errInfo)
+	klog.Infof("###### Patch node [%s] by topic[%s]: errorInfo %v", name, patchTopic, errInfo)
 	return nl, errInfo
 }
 
