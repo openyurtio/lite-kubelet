@@ -32,6 +32,10 @@ type events struct {
 	client    MessageSendor
 }
 
+func (e *events) GetPublishGetTopic(name string) string {
+	return filepath.Join(e.GetPublishPreTopic(), name, "get")
+}
+
 func (e *events) GetPublishDeleteTopic(name string) string {
 	return filepath.Join(e.GetPublishPreTopic(), name, "delete")
 }

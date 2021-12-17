@@ -170,7 +170,9 @@ const (
 	minDeadContainerInPod = 1
 
 	// nodeLeaseRenewIntervalFraction is the fraction of lease duration to renew the lease
-	nodeLeaseRenewIntervalFraction = 0.25
+	// CHANGED BY zhangjie , 0.25 to 0.5
+	nodeLeaseRenewIntervalFraction = 0.5
+	// nodeLeaseRenewIntervalFraction = 0.25
 )
 
 // SyncHandler is an interface implemented by Kubelet, for testability
@@ -196,6 +198,7 @@ type Bootstrap interface {
 	ListenAndServePodResources()
 	Run(<-chan kubetypes.PodUpdate)
 	RunOnce(<-chan kubetypes.PodUpdate) ([]RunPodResult, error)
+	BeforeRun() error
 }
 
 // Dependencies is a bin for things we might consider "injected dependencies" -- objects constructed
@@ -1458,6 +1461,12 @@ func (kl *Kubelet) initializeRuntimeDependentModules() {
 		// The shutdown manager is not critical for kubelet, so log failure, but don't block Kubelet startup if there was a failure starting it.
 		klog.Errorf("Failed to start node shutdown manager: %v", err)
 	}
+}
+
+func (k *Kubelet) BeforeRun() error {
+	// TODO ,need to check local cache(lease whether exist)
+	klog.Errorf("#### need to implement kubelet before run")
+	return nil
 }
 
 // Run starts the kubelet reacting to config updates

@@ -610,7 +610,7 @@ func run(ctx context.Context, s *options.KubeletServer, kubeDeps *kubelet.Depend
 		kubeDeps.NodesIndexer = lc.GetNodesIndexer()
 		kubeDeps.HeartbeatClient = yurtclientset.NewSimpleClientset(lc)
 		kubeDeps.KubeClient = kubeDeps.HeartbeatClient
-		kubeDeps.EventClient = kubeDeps.HeartbeatClient
+		kubeDeps.EventClient = kubeDeps.HeartbeatClient.CoreV1()
 
 		//kubeDeps.KubeClient = yurtclientset.NewSimpleClientset(nil)
 		// DELETE BY zhangjie
@@ -1253,6 +1253,11 @@ func RunKubelet(kubeServer *options.KubeletServer, kubeDeps *kubelet.Dependencie
 }
 
 func startKubelet(k kubelet.Bootstrap, podCfg *config.PodConfig, kubeCfg *kubeletconfiginternal.KubeletConfiguration, kubeDeps *kubelet.Dependencies, enableCAdvisorJSONEndpoints, enableServer bool) {
+	// pre check local cache
+	// TODO
+	if err := k.BeforeRun(); err != nil {
+		klog.Fatalf("kubelet before run error %v", err)
+	}
 	// start the kubelet
 	go k.Run(podCfg.Updates())
 

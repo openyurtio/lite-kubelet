@@ -123,6 +123,10 @@ func (data *PublishAckData) UnmarshalPublishAckData(k8sobj interface{}) (error, 
 	}
 }
 
+func PublishGetData(nodename, ns, name string, opt metav1.GetOptions) *PublishData {
+	return newPublishData(nodename, name, ns, nil, opt, "", nil, nil)
+}
+
 func PublishCreateData(nodename string, object metav1.Object, options metav1.CreateOptions) *PublishData {
 	return newPublishData(nodename, object.GetName(), object.GetNamespace(), object, options, "", nil, nil)
 }

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	coordinationv1 "k8s.io/api/coordination/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,6 +32,10 @@ type leases struct {
 	client    MessageSendor
 }
 
+func (l *leases) GetPublishGetTopic(name string) string {
+	return filepath.Join(l.GetPublishPreTopic(), name, "get")
+}
+
 func (l *leases) GetPublishDeleteTopic(name string) string {
 	return filepath.Join(l.GetPublishPreTopic(), name, "delete")
 }
@@ -54,30 +57,53 @@ func (l *leases) GetPublishPreTopic() string {
 }
 
 func (l *leases) Get(ctx context.Context, name string, options metav1.GetOptions) (*coordinationv1.Lease, error) {
-	// GET 方法返回空即可
-	t := &coordinationv1.Lease{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: l.namespace,
-			Name:      name,
-		},
+	/*
+		// GET 方法返回空即可
+		t := &coordinationv1.Lease{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: l.namespace,
+				Name:      name,
+			},
+		}
+		obj, exists, err := l.index.Get(t)
+		if err != nil {
+			klog.Errorf("Cache index get lease %++v error %v", *t, err)
+			return nil, err
+		}
+		if !exists {
+			klog.Errorf("Can not get lease %++v", *t)
+			return nil, apierrors.NewNotFound(corev1.Resource("leases"), name)
+		}
+
+		finnal, ok := obj.(*coordinationv1.Lease)
+		if !ok {
+			klog.Errorf("Cache obj convert to *coordinationv1.Lease error", *t, err)
+			return nil, apierrors.NewInternalError(fmt.Errorf("cache obj convert to *coordinationv1.Lease error"))
+		}
+		klog.Infof("###### Get lease [%s][%s] from cache succefully", l.namespace, name)
+		return finnal, nil
+	*/
+	getTopic := l.GetPublishGetTopic(name)
+	data := PublishGetData(l.nodename, l.namespace, name, options)
+
+	if err := l.client.Send(getTopic, 1, false, data, time.Second*5); err != nil {
+		klog.Errorf("Publish get lease[%s][%s] data error %v", l.namespace, name, err)
+		return nil, apierrors.NewInternalError(fmt.Errorf("publish get lease data error %v", err))
 	}
-	obj, exists, err := l.index.Get(t)
+	ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity, time.Second*5)
+	if !ok {
+		klog.Errorf("Get ack data[%s] from timeoutCache timeout  when create lease", data.Identity)
+		return nil, errors.NewTimeoutError("lease", 5)
+	}
+	nl := &coordinationv1.Lease{}
+	errInfo, err := ackdata.UnmarshalPublishAckData(nl)
 	if err != nil {
-		klog.Errorf("Cache index get lease %++v error %v", *t, err)
-		return nil, err
-	}
-	if !exists {
-		klog.Errorf("Can not get lease %++v", *t)
-		return nil, apierrors.NewNotFound(corev1.Resource("leases"), name)
+		klog.Errorf("ack data unmarshal error %v,data:\n%v", err, *ackdata)
+		return nil, errors.NewInternalError(err)
 	}
 
-	finnal, ok := obj.(*coordinationv1.Lease)
-	if !ok {
-		klog.Errorf("Cache obj convert to *coordinationv1.Lease error", *t, err)
-		return nil, apierrors.NewInternalError(fmt.Errorf("cache obj convert to *coordinationv1.Lease error"))
-	}
-	klog.Infof("###### Get lease [%s][%s] from cache succefully", l.namespace, name)
-	return finnal, nil
+	klog.V(5).Infof("###### get lease[%s][%s] by topic[%s]: errorInfo %v", l.namespace, name, getTopic, errInfo)
+	return nl, errInfo
 }
 
 func (l *leases) Create(ctx context.Context, lease *coordinationv1.Lease, opts metav1.CreateOptions) (*coordinationv1.Lease, error) {
@@ -101,7 +127,7 @@ func (l *leases) Create(ctx context.Context, lease *coordinationv1.Lease, opts m
 		return lease, errors.NewInternalError(err)
 	}
 
-	klog.Infof("###### Create lease[%s][%s] by topic[%s]: errorInfo %v", lease.GetNamespace(), lease.GetName(), createTopic, errInfo)
+	klog.V(5).Infof("###### Create lease[%s][%s] by topic[%s]: errorInfo %v", lease.GetNamespace(), lease.GetName(), createTopic, errInfo)
 	return nl, errInfo
 }
 
@@ -125,7 +151,7 @@ func (l *leases) Update(ctx context.Context, lease *coordinationv1.Lease, opts m
 		return lease, errors.NewInternalError(err)
 	}
 
-	klog.Infof("###### Update lease[%s][%s] by topic[%s]: errorInfo %v", lease.GetNamespace(), lease.GetName(), updateTopic, errInfo)
+	klog.V(5).Infof("###### Update lease[%s][%s] by topic[%s]: errorInfo %v", lease.GetNamespace(), lease.GetName(), updateTopic, errInfo)
 	return nl, errInfo
 }
 

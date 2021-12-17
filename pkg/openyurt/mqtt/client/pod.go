@@ -34,6 +34,10 @@ type pods struct {
 	index     cache.Indexer
 }
 
+func (p *pods) GetPublishGetTopic(name string) string {
+	return filepath.Join(p.GetPublishPreTopic(), name, "get")
+}
+
 func (p *pods) GetPublishDeleteTopic(name string) string {
 	return filepath.Join(p.GetPublishPreTopic(), name, "delete")
 }
@@ -55,30 +59,54 @@ func (p *pods) GetPublishPreTopic() string {
 }
 
 func (p *pods) Get(ctx context.Context, name string, options v1.GetOptions) (result *corev1.Pod, err error) {
-	// GET 方法返回空即可
-	t := &corev1.Pod{
-		ObjectMeta: v1.ObjectMeta{
-			Namespace: p.namespace,
-			Name:      name,
-		},
+	/*
+		// GET 方法返回空即可
+		t := &corev1.Pod{
+			ObjectMeta: v1.ObjectMeta{
+				Namespace: p.namespace,
+				Name:      name,
+			},
+		}
+		obj, exists, err := p.index.Get(t)
+		if err != nil {
+			klog.Errorf("Cache index get pod %++v error %v", *t, err)
+			return nil, err
+		}
+		if !exists {
+			klog.Errorf("Can not get pod %++v", *t)
+			return nil, apierrors.NewNotFound(corev1.Resource("pods"), name)
+		}
+
+		finnal, ok := obj.(*corev1.Pod)
+		if !ok {
+			klog.Errorf("Cache obj convert to *corev1.Pod error", *t, err)
+			return nil, apierrors.NewInternalError(fmt.Errorf("cache obj convert to *corev1.Pod error"))
+		}
+		klog.Infof("###### Get pod [%s][%s] from cache succefully", p.namespace, name)
+		return finnal, nil
+	*/
+
+	getTopic := p.GetPublishGetTopic(name)
+	data := PublishGetData(p.nodename, p.namespace, name, options)
+
+	if err := p.client.Send(getTopic, 1, false, data, time.Second*5); err != nil {
+		klog.Errorf("Publish get pod[%s][%s] data error %v", p.namespace, name, err)
+		return nil, apierrors.NewInternalError(fmt.Errorf("publish get pod data error %v", err))
 	}
-	obj, exists, err := p.index.Get(t)
+	ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity, time.Second*5)
+	if !ok {
+		klog.Errorf("Get ack data[%s] from timeoutCache timeout  when get pod", data.Identity)
+		return nil, errors.NewTimeoutError("pod", 5)
+	}
+	nl := &corev1.Pod{}
+	errInfo, err := ackdata.UnmarshalPublishAckData(nl)
 	if err != nil {
-		klog.Errorf("Cache index get pod %++v error %v", *t, err)
-		return nil, err
-	}
-	if !exists {
-		klog.Errorf("Can not get pod %++v", *t)
-		return nil, apierrors.NewNotFound(corev1.Resource("pods"), name)
+		klog.Errorf("ack data unmarshal error %v,data:\n%v", err, *ackdata)
+		return nil, errors.NewInternalError(err)
 	}
 
-	finnal, ok := obj.(*corev1.Pod)
-	if !ok {
-		klog.Errorf("Cache obj convert to *corev1.Pod error", *t, err)
-		return nil, apierrors.NewInternalError(fmt.Errorf("cache obj convert to *corev1.Pod error"))
-	}
-	klog.Infof("###### Get pod [%s][%s] from cache succefully", p.namespace, name)
-	return finnal, nil
+	klog.Infof("###### get pod[%s][%s] by topic[%s]: errorInfo %v", p.namespace, name, getTopic, errInfo)
+	return nl, errInfo
 }
 func (p *pods) Create(ctx context.Context, pod *corev1.Pod, opts v1.CreateOptions) (result *corev1.Pod, err error) {
 

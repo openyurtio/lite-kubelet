@@ -34,6 +34,9 @@ type nodes struct {
 	client   MessageSendor
 }
 
+func (n *nodes) GetPublishGetTopic(name string) string {
+	return filepath.Join(n.GetPublishPreTopic(), name, "get")
+}
 func (n *nodes) GetPublishDeleteTopic(name string) string {
 	return filepath.Join(n.GetPublishPreTopic(), name, "delete")
 }

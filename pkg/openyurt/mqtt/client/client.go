@@ -20,9 +20,11 @@ var mqttclient mqtt.Client
 
 /// sets the MessageHandler that will be called when a message
 // is received that does not match any known subscriptions.
+/*
 var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 	klog.V(4).Infof("Receive Message: %s from topic: %s, this message is received but does not match any known subscriptions", string(msg.Payload()), msg.Topic())
 }
+*/
 
 var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
 	klog.V(4).Infof("Connected mqtt broker ...")
@@ -44,7 +46,8 @@ func NewMqttClient(broker string, port int, clientid, username, passwd string) m
 		opts.SetUsername(username)
 		opts.SetPassword(passwd)
 
-		opts.SetDefaultPublishHandler(messagePubHandler)
+		// Do not set default publish handler
+		//opts.SetDefaultPublishHandler(messagePubHandler)
 		opts.SetAutoReconnect(true)
 		opts.SetConnectRetry(true)
 		opts.SetOnConnectHandler(connectHandler)

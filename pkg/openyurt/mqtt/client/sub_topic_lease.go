@@ -1,15 +1,6 @@
 package client
 
-import (
-	"path/filepath"
-
-	mqtt "github.com/eclipse/paho.mqtt.golang"
-
-	coordinationv1 "k8s.io/api/coordination/v1"
-	"k8s.io/klog/v2"
-	"k8s.io/kubernetes/pkg/openyurt/mqtt/manifest"
-)
-
+/*
 type LeaseSubTopic struct {
 }
 
@@ -24,3 +15,5 @@ func (l *LeaseSubTopic) GetResourceTopic(nodename string) (string, mqtt.MessageH
 }
 
 var _ SubTopicor = &LeaseSubTopic{}
+
+*/

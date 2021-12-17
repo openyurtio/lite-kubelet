@@ -42,8 +42,9 @@ type LocalClient struct {
 
 func (l *LocalClient) SubscribeTopics(nodename string) {
 
-	RegisterSubtopicor(nodename, &LeaseSubTopic{})
+	//RegisterSubtopicor(nodename, &LeaseSubTopic{})
 	RegisterSubtopicor(nodename, &NodeSubTopic{})
+	RegisterSubtopicor(nodename, &PodSubTopic{})
 	RegisterSubtopicor(nodename, &AckSubTopic{})
 
 	for t, f := range GetAllTopicFuncs() {
