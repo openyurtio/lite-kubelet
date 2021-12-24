@@ -64,7 +64,7 @@ func (l *LocalClient) Send(topic string, qos byte, retained bool, obj Identityor
 	if err != nil {
 		return fmt.Errorf("Marshal object error %v", err)
 	}
-	klog.V(4).Infof("###### [%s] Prepare to send to topic %s, data:\n%s", obj.GetIdentity(), topic, string(data))
+	klog.V(5).Infof("[%s] Prepare to send to topic %s, data:\n%s", obj.GetIdentity(), topic, string(data))
 	token := l.send.Publish(topic, qos, retained, data)
 	out := token.WaitTimeout(timeout)
 	if !out {
@@ -73,7 +73,7 @@ func (l *LocalClient) Send(topic string, qos byte, retained bool, obj Identityor
 	if err := token.Error(); err != nil {
 		return fmt.Errorf("[%s] Publish data error %v", obj.GetIdentity(), err)
 	}
-	klog.V(4).Infof("###### [%s] Send to topic %s, data successful", obj.GetIdentity(), topic)
+	klog.V(4).Infof("[%s] Send to topic %s, data successful", obj.GetIdentity(), topic)
 	return nil
 }
 
@@ -108,18 +108,18 @@ func NewLocalClient(nodename, broker string, port int, clientid, username, passw
 	}
 
 	nodeIndexer := fileCache.NewFileObiectIndexer(fileCache.NewDefaultFileNodeDeps(manifest.GetNodesManifestPath()), false, nil)
-	leaseIndexer := fileCache.NewFileObiectIndexer(fileCache.NewDefaultFileLeaseDeps(manifest.GetLeasesManifestPath()), false, nil)
-	eventIndexer := fileCache.NewFileObiectIndexer(fileCache.NewDefaultFileEventDeps(manifest.GetEventsManifestPath()), false, nil)
-	podsIndexer := fileCache.NewFileObiectIndexer(fileCache.NewDefaultFilePodDeps(manifest.GetPodsManifestPath()), false, nil)
+	//leaseIndexer := fileCache.NewFileObiectIndexer(fileCache.NewDefaultFileLeaseDeps(manifest.GetLeasesManifestPath()), false, nil)
+	//eventIndexer := fileCache.NewFileObiectIndexer(fileCache.NewDefaultFileEventDeps(manifest.GetEventsManifestPath()), false, nil)
+	//podsIndexer := fileCache.NewFileObiectIndexer(fileCache.NewDefaultFilePodDeps(manifest.GetPodsManifestPath()), false, nil)
 	c := NewMqttClient(broker, port, clientid, username, passwd)
 
 	l := &LocalClient{
 		nodename: nodename,
 		send:     c,
 		nodes:    nodeIndexer,
-		leases:   leaseIndexer,
-		events:   eventIndexer,
-		pods:     podsIndexer,
+		leases:   nil,
+		events:   nil,
+		pods:     nil,
 	}
 	return l, nil
 }
@@ -146,6 +146,7 @@ func saveMessageToObjectFile(message mqtt.Message, obj metav1.Object, objectMani
 			return err
 		}
 		klog.Warningf("Delete localcache file %s succefully", filePath)
+		return nil
 	}
 
 	// must use CREATE AND TRUNC

@@ -20,9 +20,10 @@ import (
 	"runtime"
 	"time"
 
+	kubetypes "k8s.io/kubernetes/pkg/kubelet/types"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kubernetes/pkg/kubelet/config"
-	kubetypes "k8s.io/kubernetes/pkg/kubelet/types"
 )
 
 const (
@@ -45,14 +46,10 @@ func NewContainerRuntimeOptions() *config.ContainerRuntimeOptions {
 	}
 
 	return &config.ContainerRuntimeOptions{
-		//ContainerRuntime:          kubetypes.DockerContainerRuntime,
-		// CHANGED BY zhangjie , change docker to remote
-		ContainerRuntime:        kubetypes.RemoteContainerRuntime,
-		DockerEndpoint:          dockerEndpoint,
-		DockershimRootDirectory: "/var/lib/dockershim",
-		//PodSandboxImage:           defaultPodSandboxImage,
-		// CHANGED BY zhangjie , PodSandboxImage use "", because , use containerd, not docker
-		PodSandboxImage:           "",
+		ContainerRuntime:          kubetypes.DockerContainerRuntime,
+		DockerEndpoint:            dockerEndpoint,
+		DockershimRootDirectory:   "/var/lib/dockershim",
+		PodSandboxImage:           defaultPodSandboxImage,
 		ImagePullProgressDeadline: metav1.Duration{Duration: 1 * time.Minute},
 
 		CNIBinDir:   "/opt/cni/bin",

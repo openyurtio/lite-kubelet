@@ -53,12 +53,15 @@ func (e *events) GetPublishPatchTopic(name string) string {
 }
 
 func (e *events) GetPublishPreTopic() string {
+	if len(e.namespace) == 0 {
+		e.namespace = "default"
+	}
 	return filepath.Join(MqttEdgePublishRootTopic, "events", e.namespace)
 }
 
 func (e *events) CreateWithEventNamespace(event *corev1.Event) (*corev1.Event, error) {
 	createTopic := e.GetPublishCreateTopic(event.GetName())
-	data := PublishCreateData(e.nodename, event, metav1.CreateOptions{})
+	data := PublishCreateData(false, e.nodename, event, metav1.CreateOptions{})
 
 	if err := e.client.Send(createTopic, 1, false, data, time.Second*5); err != nil {
 		klog.Errorf("Publish create event[%s][%s] data error %v", event.Namespace, event.Name, err)
@@ -78,28 +81,30 @@ func (e *events) CreateWithEventNamespace(event *corev1.Event) (*corev1.Event, e
 			return event, errors.NewInternalError(err)
 		}
 
-		klog.Infof("###### Create event[%s][%s] by topic[%s]: errorInfo %v",
+		klog.Infof("Create event[%s][%s] by topic[%s]: errorInfo %v",
 			event.GetNamespace(), event.GetName(), createTopic, errInfo)
 		return nl, errInfo
 	*/
+	klog.V(4).Infof("Create event[%s][%s] by topic[%s] successfully", event.GetNamespace(), event.GetName(), createTopic)
 	return event, nil
 }
 
 func (e *events) UpdateWithEventNamespace(event *corev1.Event) (*corev1.Event, error) {
 	updateTopic := e.GetPublishUpdateTopic(event.GetName())
-	data := PublishUpdateData(e.nodename, event, metav1.UpdateOptions{})
+	data := PublishUpdateData(false, e.nodename, event, metav1.UpdateOptions{})
 
 	if err := e.client.Send(updateTopic, 1, false, data, time.Second*5); err != nil {
 		klog.Errorf("Publish update event[%s][%s] data error %v", event.Namespace, event.Name, err)
 		return nil, apierrors.NewInternalError(fmt.Errorf("publish update event data error %v", err))
 	}
 	// do not dealwith ack
+	klog.V(4).Infof("Update event[%s][%s] by topic[%s] successfully", event.GetNamespace(), event.GetName(), updateTopic)
 	return event, nil
 }
 
 func (e *events) PatchWithEventNamespace(event *corev1.Event, data []byte) (*corev1.Event, error) {
 	patchTopic := e.GetPublishPatchTopic(event.GetName())
-	pathData := PublishPatchData(e.nodename, event.GetName(), event.GetNamespace(),
+	pathData := PublishPatchData(false, e.nodename, event.GetName(), event.GetNamespace(),
 		event, types.StrategicMergePatchType, data, metav1.PatchOptions{})
 
 	if err := e.client.Send(patchTopic, 1, false, pathData, time.Second*5); err != nil {
@@ -107,6 +112,7 @@ func (e *events) PatchWithEventNamespace(event *corev1.Event, data []byte) (*cor
 		return nil, apierrors.NewInternalError(fmt.Errorf("publish patch event data error %v", err))
 	}
 	// do not dealwith ack
+	klog.V(4).Infof("Patch event[%s][%s] by topic[%s] successfully", event.GetNamespace(), event.GetName(), patchTopic)
 	return event, nil
 }
 

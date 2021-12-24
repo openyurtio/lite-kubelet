@@ -384,6 +384,12 @@ func (g *GenericPLEG) updateCache(pod *kubecontainer.Pod, pid types.UID) error {
 	// all containers again.
 	status, err := g.runtime.GetPodStatus(pod.ID, pod.Name, pod.Namespace)
 	klog.V(4).Infof("PLEG: Write status for %s/%s: %#v (err: %v)", pod.Name, pod.Namespace, status, err)
+	for _, s := range status.ContainerStatuses {
+		klog.V(4).Infof("PLEG: pod %s/%s ContainerStatus status: %#v", pod.Name, pod.Namespace, *s)
+	}
+	for _, s := range status.SandboxStatuses {
+		klog.V(4).Infof("PLEG: pod %s/%s SandboxStatus status: %#v", pod.Name, pod.Namespace, *s)
+	}
 	if err == nil {
 		// Preserve the pod IP across cache updates if the new IP is empty.
 		// When a pod is torn down, kubelet may race with PLEG and retrieve

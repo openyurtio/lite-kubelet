@@ -315,29 +315,26 @@ func PreInitRuntimeService(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		}
 	}
 
-	// DELETE BY zhangjie , default use container(remote)
-	/*
-		switch containerRuntime {
-		case kubetypes.DockerContainerRuntime:
-			klog.Warningf("Using dockershim is deprecated, please consider using a full-fledged CRI implementation")
-			if err := runDockershim(
-				kubeCfg,
-				kubeDeps,
-				crOptions,
-				runtimeCgroups,
-				remoteRuntimeEndpoint,
-				remoteImageEndpoint,
-				nonMasqueradeCIDR,
-			); err != nil {
-				return err
-			}
-		case kubetypes.RemoteContainerRuntime:
-			// No-op.
-			break
-		default:
-			return fmt.Errorf("unsupported CRI runtime: %q", containerRuntime)
+	switch containerRuntime {
+	case kubetypes.DockerContainerRuntime:
+		klog.Warningf("Using dockershim is deprecated, please consider using a full-fledged CRI implementation")
+		if err := runDockershim(
+			kubeCfg,
+			kubeDeps,
+			crOptions,
+			runtimeCgroups,
+			remoteRuntimeEndpoint,
+			remoteImageEndpoint,
+			nonMasqueradeCIDR,
+		); err != nil {
+			return err
 		}
-	*/
+	case kubetypes.RemoteContainerRuntime:
+		// No-op.
+		break
+	default:
+		return fmt.Errorf("unsupported CRI runtime: %q", containerRuntime)
+	}
 
 	var err error
 	if kubeDeps.RemoteRuntimeService, err = remote.NewRemoteRuntimeService(remoteRuntimeEndpoint, kubeCfg.RuntimeRequestTimeout.Duration); err != nil {
@@ -2367,7 +2364,9 @@ func (kl *Kubelet) cleanUpContainersInPod(podID types.UID, exitedContainerID str
 // pod CIDR, runtime status and node statuses ASAP.
 func (kl *Kubelet) fastStatusUpdateOnce() {
 	for {
-		time.Sleep(100 * time.Millisecond)
+		// CHNAGED BY zhangjie, 将Get Node 的时间，放长一点， 防止大量发送mqtt 消息
+		//time.Sleep(100 * time.Millisecond)
+		time.Sleep(5 * time.Second)
 		node, err := kl.GetNode()
 		if err != nil {
 			klog.Errorf("FasterStatusUpdateOnce get node error %v", err.Error())

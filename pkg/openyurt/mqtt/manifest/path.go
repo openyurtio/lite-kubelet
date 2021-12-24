@@ -30,8 +30,6 @@ func MkdirAllSubManifestPath() {
 	allManifestPath = append(allManifestPath,
 		GetPodsManifestPath(),
 		GetNodesManifestPath(),
-		GetLeasesManifestPath(),
-		GetEventsManifestPath(),
 	)
 
 	for _, p := range allManifestPath {

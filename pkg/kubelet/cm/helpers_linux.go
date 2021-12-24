@@ -307,15 +307,12 @@ func GetKubeletContainer(kubeletCgroups string) (string, error) {
 
 // GetRuntimeContainer returns the cgroup used by the container runtime
 func GetRuntimeContainer(containerRuntime, runtimeCgroups string) (string, error) {
-	// DELETE BY zhangjie , runtime use remote
-	/*
-		if containerRuntime == "docker" {
-			cont, err := getContainerNameForProcess(dockerProcessName, dockerPidFile)
-			if err != nil {
-				return "", fmt.Errorf("failed to get container name for docker process: %v", err)
-			}
-			return cont, nil
+	if containerRuntime == "docker" {
+		cont, err := getContainerNameForProcess(dockerProcessName, dockerPidFile)
+		if err != nil {
+			return "", fmt.Errorf("failed to get container name for docker process: %v", err)
 		}
-	*/
+		return cont, nil
+	}
 	return runtimeCgroups, nil
 }

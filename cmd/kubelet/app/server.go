@@ -32,6 +32,8 @@ import (
 	"strings"
 	"time"
 
+	kubetypes "k8s.io/kubernetes/pkg/kubelet/types"
+
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -186,12 +188,9 @@ HTTP server: The kubelet can also listen for HTTP and respond to a simple API
 				klog.Fatal(err)
 			}
 
-			// DELETE BY zhangjie
-			/*
-				if kubeletFlags.ContainerRuntime == "remote" && cleanFlagSet.Changed("pod-infra-container-image") {
-					klog.Warning("Warning: For remote container runtime, --pod-infra-container-image is ignored in kubelet, which should be set in that remote runtime instead")
-				}
-			*/
+			if kubeletFlags.ContainerRuntime == "remote" && cleanFlagSet.Changed("pod-infra-container-image") {
+				klog.Warning("Warning: For remote container runtime, --pod-infra-container-image is ignored in kubelet, which should be set in that remote runtime instead")
+			}
 
 			// load kubelet config file, if provided
 			// DELETE BY zhangjie
@@ -387,16 +386,13 @@ func UnsecuredDependencies(s *options.KubeletServer, featureGate featuregate.Fea
 
 	var dockerOptions *kubelet.DockerOptions
 
-	// DELETE BY zhangjie , default containerruntime is remote , not docker
-	/*
-		if s.ContainerRuntime == kubetypes.DockerContainerRuntime {
-			dockerOptions = &kubelet.DockerOptions{
-				DockerEndpoint:            s.DockerEndpoint,
-				RuntimeRequestTimeout:     s.RuntimeRequestTimeout.Duration,
-				ImagePullProgressDeadline: s.ImagePullProgressDeadline.Duration,
-			}
+	if s.ContainerRuntime == kubetypes.DockerContainerRuntime {
+		dockerOptions = &kubelet.DockerOptions{
+			DockerEndpoint:            s.DockerEndpoint,
+			RuntimeRequestTimeout:     s.RuntimeRequestTimeout.Duration,
+			ImagePullProgressDeadline: s.ImagePullProgressDeadline.Duration,
 		}
-	*/
+	}
 
 	plugins, err := ProbeVolumePlugins(featureGate)
 	if err != nil {

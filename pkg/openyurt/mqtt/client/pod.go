@@ -55,6 +55,9 @@ func (p *pods) GetPublishPatchTopic(name string) string {
 }
 
 func (p *pods) GetPublishPreTopic() string {
+	if len(p.namespace) == 0 {
+		p.namespace = "default"
+	}
 	return filepath.Join(MqttEdgePublishRootTopic, "pods", p.namespace)
 }
 
@@ -82,12 +85,12 @@ func (p *pods) Get(ctx context.Context, name string, options v1.GetOptions) (res
 			klog.Errorf("Cache obj convert to *corev1.Pod error", *t, err)
 			return nil, apierrors.NewInternalError(fmt.Errorf("cache obj convert to *corev1.Pod error"))
 		}
-		klog.Infof("###### Get pod [%s][%s] from cache succefully", p.namespace, name)
+		klog.Infof("Get pod [%s][%s] from cache succefully", p.namespace, name)
 		return finnal, nil
 	*/
 
 	getTopic := p.GetPublishGetTopic(name)
-	data := PublishGetData(p.nodename, p.namespace, name, options)
+	data := PublishGetData(true, p.nodename, p.namespace, name, options)
 
 	if err := p.client.Send(getTopic, 1, false, data, time.Second*5); err != nil {
 		klog.Errorf("Publish get pod[%s][%s] data error %v", p.namespace, name, err)
@@ -105,13 +108,13 @@ func (p *pods) Get(ctx context.Context, name string, options v1.GetOptions) (res
 		return nil, errors.NewInternalError(err)
 	}
 
-	klog.Infof("###### get pod[%s][%s] by topic[%s]: errorInfo %v", p.namespace, name, getTopic, errInfo)
+	klog.V(4).Infof("Get pod[%s][%s] by topic[%s]: errorInfo %v", p.namespace, name, getTopic, errInfo)
 	return nl, errInfo
 }
 func (p *pods) Create(ctx context.Context, pod *corev1.Pod, opts v1.CreateOptions) (result *corev1.Pod, err error) {
 
 	createTopic := p.GetPublishCreateTopic(pod.GetName())
-	data := PublishCreateData(p.nodename, pod, opts)
+	data := PublishCreateData(true, p.nodename, pod, opts)
 
 	if err := p.client.Send(createTopic, 1, false, data, time.Second*5); err != nil {
 		klog.Errorf("Publish create pod[%s][%s] data error %v", pod.Namespace, pod.Name, err)
@@ -129,7 +132,7 @@ func (p *pods) Create(ctx context.Context, pod *corev1.Pod, opts v1.CreateOption
 		return pod, errors.NewInternalError(err)
 	}
 
-	klog.Infof("###### Create pod[%s][%s] by topic[%s]: errorInfo %v",
+	klog.V(4).Infof("Create pod[%s][%s] by topic[%s]: errorInfo %v",
 		pod.GetNamespace(), pod.GetName(), createTopic, errInfo)
 	return nl, errInfo
 }
@@ -137,7 +140,7 @@ func (p *pods) Create(ctx context.Context, pod *corev1.Pod, opts v1.CreateOption
 func (p *pods) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 
 	deleteTopic := p.GetPublishDeleteTopic(name)
-	data := PublishDeleteData(p.nodename, name, p.namespace, opts)
+	data := PublishDeleteData(true, p.nodename, name, p.namespace, opts)
 
 	if err := p.client.Send(deleteTopic, 1, false, data, time.Second*5); err != nil {
 		klog.Errorf("Publish delete pod[%s][%s] data error %v", p.namespace, name, err)
@@ -155,14 +158,14 @@ func (p *pods) Delete(ctx context.Context, name string, opts v1.DeleteOptions) e
 		return errors.NewInternalError(err)
 	}
 
-	klog.Infof("###### delete pod[%s][%s] by topic[%s]: errorInfo %v",
+	klog.V(4).Infof("Delete pod[%s][%s] by topic[%s]: errorInfo %v",
 		p.namespace, name, deleteTopic, errInfo)
 	return errInfo
 }
 
 func (p *pods) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *corev1.Pod, err error) {
 	patchTopic := p.GetPublishPatchTopic(name)
-	patchData := PublishPatchData(p.nodename, name, p.namespace,
+	patchData := PublishPatchData(true, p.nodename, name, p.namespace,
 		nil, pt, data, opts, subresources...)
 
 	if err := p.client.Send(patchTopic, 1, false, patchData, time.Second*5); err != nil {
@@ -181,7 +184,7 @@ func (p *pods) Patch(ctx context.Context, name string, pt types.PatchType, data 
 		return nil, errors.NewInternalError(err)
 	}
 
-	klog.Infof("###### Patch pod [%s] by topic[%s]: errorInfo %v", name, patchTopic, errInfo)
+	klog.V(4).Infof("Patch pod [%s] by topic[%s]: errorInfo %v", name, patchTopic, errInfo)
 	return nl, errInfo
 }
 

@@ -60,7 +60,7 @@ func (n *nodes) GetPublishPreTopic() string {
 func (n *nodes) Create(ctx context.Context, node *corev1.Node, opts v1.CreateOptions) (result *corev1.Node, err error) {
 
 	createTopic := n.GetPublishCreateTopic(node.GetName())
-	data := PublishCreateData(n.nodename, node, opts)
+	data := PublishCreateData(true, n.nodename, node, opts)
 
 	if err := n.client.Send(createTopic, 1, false, data, time.Second*5); err != nil {
 		klog.Errorf("Publish create node[%s] data error %v", node.Name, err)
@@ -78,13 +78,13 @@ func (n *nodes) Create(ctx context.Context, node *corev1.Node, opts v1.CreateOpt
 		return node, errors.NewInternalError(err)
 	}
 
-	klog.Infof("###### [%s] Create node [%s] by topic[%s]: errorInfo %v", ackdata.Identity, node.GetName(), createTopic, errInfo)
+	klog.V(4).Infof("[%s] Create node [%s] by topic[%s]: errorInfo %v", ackdata.Identity, node.GetName(), createTopic, errInfo)
 	return nl, errInfo
 }
 
 func (n *nodes) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *corev1.Node, err error) {
 	patchTopic := n.GetPublishPatchTopic(name)
-	patchData := PublishPatchData(n.nodename, name, "", nil, pt, data, opts, subresources...)
+	patchData := PublishPatchData(true, n.nodename, name, "", nil, pt, data, opts, subresources...)
 
 	if err := n.client.Send(patchTopic, 1, false, patchData, time.Second*5); err != nil {
 		klog.Errorf("Publish patch node[%s] data error %v", name, err)
@@ -102,13 +102,13 @@ func (n *nodes) Patch(ctx context.Context, name string, pt types.PatchType, data
 		return nil, errors.NewInternalError(err)
 	}
 
-	klog.Infof("###### Patch node [%s] by topic[%s]: errorInfo %v", name, patchTopic, errInfo)
+	klog.V(4).Infof("Patch node [%s] by topic[%s]: errorInfo %v", name, patchTopic, errInfo)
 	return nl, errInfo
 }
 
 func (n *nodes) Get(ctx context.Context, name string, options v1.GetOptions) (result *corev1.Node, err error) {
 
-	klog.Infof("###### Prepare to Get Node %s from cache ", name)
+	klog.Infof("Prepare to Get Node %s from cache ", name)
 	obj, exists, err := n.index.GetByKey(name)
 	if err != nil {
 		klog.Errorf("Cache index get node %s error %v", name, err)
@@ -125,7 +125,7 @@ func (n *nodes) Get(ctx context.Context, name string, options v1.GetOptions) (re
 		return nil, apierrors.NewInternalError(fmt.Errorf("cache obj convert to *corev1.Node error"))
 	}
 
-	klog.Infof("###### Get Node %s from cache succefully", name)
+	klog.V(4).Infof("Get Node %s from cache succefully", name)
 	return finnal, nil
 }
 

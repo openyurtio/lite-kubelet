@@ -32,6 +32,7 @@ type PublishData struct {
 	PatchData         []byte          `json:"patch_data,omitempty"`
 	PatchSubResources []string        `json:"patch_sub_resources,omitempty"`
 	NodeName          string          `json:"node_name,omitempty"`
+	NeedAck           bool            `json:"need_ack,omitempty"`
 }
 
 func (p *PublishData) GetIdentity() string {
@@ -52,7 +53,7 @@ func (p *PublishAckData) GetIdentity() string {
 var _ Identityor = &PublishData{}
 var _ Identityor = &PublishAckData{}
 
-func newPublishData(nodename, objectName, objectNs string, obj metav1.Object, options interface{}, pathType types.PatchType, patchData []byte, subresources []string) *PublishData {
+func newPublishData(needAck bool, nodename, objectName, objectNs string, obj metav1.Object, options interface{}, pathType types.PatchType, patchData []byte, subresources []string) *PublishData {
 	var name, ns string
 	if obj != nil {
 		name = obj.GetName()
@@ -74,6 +75,7 @@ func newPublishData(nodename, objectName, objectNs string, obj metav1.Object, op
 		PatchType:         pathType,
 		PatchData:         patchData,
 		PatchSubResources: subresources,
+		NeedAck:           needAck,
 	}
 	return data
 }
@@ -123,22 +125,22 @@ func (data *PublishAckData) UnmarshalPublishAckData(k8sobj interface{}) (error, 
 	}
 }
 
-func PublishGetData(nodename, ns, name string, opt metav1.GetOptions) *PublishData {
-	return newPublishData(nodename, name, ns, nil, opt, "", nil, nil)
+func PublishGetData(needack bool, nodename, ns, name string, opt metav1.GetOptions) *PublishData {
+	return newPublishData(needack, nodename, name, ns, nil, opt, "", nil, nil)
 }
 
-func PublishCreateData(nodename string, object metav1.Object, options metav1.CreateOptions) *PublishData {
-	return newPublishData(nodename, object.GetName(), object.GetNamespace(), object, options, "", nil, nil)
+func PublishCreateData(needack bool, nodename string, object metav1.Object, options metav1.CreateOptions) *PublishData {
+	return newPublishData(needack, nodename, object.GetName(), object.GetNamespace(), object, options, "", nil, nil)
 }
 
-func PublishDeleteData(nodename, name, ns string, options metav1.DeleteOptions) *PublishData {
-	return newPublishData(nodename, name, ns, nil, options, "", nil, nil)
+func PublishDeleteData(needack bool, nodename, name, ns string, options metav1.DeleteOptions) *PublishData {
+	return newPublishData(needack, nodename, name, ns, nil, options, "", nil, nil)
 }
 
-func PublishPatchData(nodename, name, ns string, object metav1.Object, patchType types.PatchType, patchData []byte, options metav1.PatchOptions, subresources ...string) *PublishData {
-	return newPublishData(nodename, name, ns, object, options, patchType, patchData, subresources)
+func PublishPatchData(needack bool, nodename, name, ns string, object metav1.Object, patchType types.PatchType, patchData []byte, options metav1.PatchOptions, subresources ...string) *PublishData {
+	return newPublishData(needack, nodename, name, ns, object, options, patchType, patchData, subresources)
 }
 
-func PublishUpdateData(nodename string, object metav1.Object, options metav1.UpdateOptions) *PublishData {
-	return newPublishData(nodename, object.GetName(), object.GetNamespace(), object, options, "", nil, nil)
+func PublishUpdateData(needack bool, nodename string, object metav1.Object, options metav1.UpdateOptions) *PublishData {
+	return newPublishData(needack, nodename, object.GetName(), object.GetNamespace(), object, options, "", nil, nil)
 }

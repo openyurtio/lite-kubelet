@@ -1509,6 +1509,7 @@ func (kl *Kubelet) generateAPIPodStatus(pod *v1.Pod, podStatus *kubecontainer.Po
 
 	s := kl.convertStatusToAPIStatus(pod, podStatus)
 
+	klog.V(3).Infof("Generating convert status for %q :%++v", format.Pod(pod), *s)
 	// check if an internal module has requested the pod is evicted.
 	for _, podSyncHandler := range kl.PodSyncHandlers {
 		if result := podSyncHandler.ShouldEvict(pod); result.Evict {
@@ -1544,6 +1545,7 @@ func (kl *Kubelet) generateAPIPodStatus(pod *v1.Pod, podStatus *kubecontainer.Po
 		Type:   v1.PodScheduled,
 		Status: v1.ConditionTrue,
 	})
+	klog.V(4).Infof("Generating status Conditions %++v", s.Conditions)
 
 	if kl.kubeClient != nil {
 		hostIPs, err := kl.getHostIPsAnyWay()

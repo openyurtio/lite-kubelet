@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -171,6 +171,14 @@ func (p *podWorkers) managePodLoop(podUpdates <-chan UpdatePodOptions) {
 				// all other events are now dispatched from syncPodFn
 				p.recorder.Eventf(update.Pod, v1.EventTypeWarning, events.FailedSync, "error determining status: %v", err)
 				return err
+			}
+			if status != nil {
+				for _, s := range status.ContainerStatuses {
+					klog.V(4).Infof("managepodLoop get pod[%s][%s] containersstatus:%v", update.Pod.GetNamespace(), update.Pod.GetName(), *s)
+				}
+				for _, s := range status.SandboxStatuses {
+					klog.V(4).Infof("managepodLoop get pod[%s][%s] sandboxstatus:%v", update.Pod.GetNamespace(), update.Pod.GetName(), *s)
+				}
 			}
 			err = p.syncPodFn(syncPodOptions{
 				mirrorPod:      update.MirrorPod,

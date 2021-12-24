@@ -48,6 +48,7 @@ func (t *TimeoutCache) run(period, timeout time.Duration) {
 				}
 				return true
 			})
+			t.cond.Broadcast()
 		}
 	}
 }

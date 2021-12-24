@@ -27,14 +27,34 @@ function scpbin() {
 	scp ${LINUX_KUBELET_BIN} testkubelet:~/download/
 }
 
+function scpbindocker() {
+	scp ${LINUX_KUBELET_BIN} testkubeletdocker:~/download/
+}
+
+function camera() {
+
+	echo "开始构建arm 版本"
+	KUBE_BUILD_PLATFORMS=linux/arm make WHAT=cmd/kubelet GOFLAGS=-v
+    cp _output/local/bin/linux/arm/kubelet  ~/Downloads/lite-kubelet/
+}
+
 function help() {
         echo """
 $BINARY build 
 	单纯构建linux 环境的kubelet
 $BINARY scp 
 	将linux 环境的kubelet scp 到目标机器
+$BINARY scpdocker
+	将linux 环境的kubelet scp 到目标docker机器上
+
+$BINARY camera 
+    即构建arm 版本，cp ~/Download 
+
 $BINARY all 
     即构建，又scp
+$BINARY alldocker
+    即构建，又scp 到docker
+
         """
         exit 0
 }
@@ -46,11 +66,20 @@ case $SUB_CMD in
     "scp")
         scpbin 
         ;;
+    "scpdocker")
+        scpbindocker 
+        ;;
     "all")
         buildbin
 	    scpbin	
         ;;
-
+    "alldocker")
+        buildbin
+	    scpbindocker	
+        ;;
+    "camera")
+        camera 
+        ;;
     *)
         echo "wrong cmd , help info:"
         help

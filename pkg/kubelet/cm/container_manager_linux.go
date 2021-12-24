@@ -475,27 +475,24 @@ func (cm *containerManagerImpl) setupNode(activePods ActivePodsFunc) error {
 	}
 
 	systemContainers := []*systemContainer{}
-	// DELETED BY zhangjie
-	/*
-		if cm.ContainerRuntime == "docker" {
-			// With the docker-CRI integration, dockershim manages the cgroups
-			// and oom score for the docker processes.
-			// Check the cgroup for docker periodically, so kubelet can serve stats for the docker runtime.
-			// TODO(KEP#866): remove special processing for CRI "docker" enablement
-			cm.periodicTasks = append(cm.periodicTasks, func() {
-				klog.V(4).Infof("[ContainerManager]: Adding periodic tasks for docker CRI integration")
-				cont, err := getContainerNameForProcess(dockerProcessName, dockerPidFile)
-				if err != nil {
-					klog.Error(err)
-					return
-				}
-				klog.V(2).Infof("[ContainerManager]: Discovered runtime cgroups name: %s", cont)
-				cm.Lock()
-				defer cm.Unlock()
-				cm.RuntimeCgroupsName = cont
-			})
-		}
-	*/
+	if cm.ContainerRuntime == "docker" {
+		// With the docker-CRI integration, dockershim manages the cgroups
+		// and oom score for the docker processes.
+		// Check the cgroup for docker periodically, so kubelet can serve stats for the docker runtime.
+		// TODO(KEP#866): remove special processing for CRI "docker" enablement
+		cm.periodicTasks = append(cm.periodicTasks, func() {
+			klog.V(4).Infof("[ContainerManager]: Adding periodic tasks for docker CRI integration")
+			cont, err := getContainerNameForProcess(dockerProcessName, dockerPidFile)
+			if err != nil {
+				klog.Error(err)
+				return
+			}
+			klog.V(2).Infof("[ContainerManager]: Discovered runtime cgroups name: %s", cont)
+			cm.Lock()
+			defer cm.Unlock()
+			cm.RuntimeCgroupsName = cont
+		})
+	}
 
 	if cm.SystemCgroupsName != "" {
 		if cm.SystemCgroupsName == "/" {

@@ -53,6 +53,9 @@ func (l *leases) GetPublishPatchTopic(name string) string {
 }
 
 func (l *leases) GetPublishPreTopic() string {
+	if len(l.namespace) == 0 {
+		l.namespace = "default"
+	}
 	return filepath.Join(MqttEdgePublishRootTopic, "leases", l.namespace)
 }
 
@@ -80,11 +83,11 @@ func (l *leases) Get(ctx context.Context, name string, options metav1.GetOptions
 			klog.Errorf("Cache obj convert to *coordinationv1.Lease error", *t, err)
 			return nil, apierrors.NewInternalError(fmt.Errorf("cache obj convert to *coordinationv1.Lease error"))
 		}
-		klog.Infof("###### Get lease [%s][%s] from cache succefully", l.namespace, name)
+		klog.Infof("Get lease [%s][%s] from cache succefully", l.namespace, name)
 		return finnal, nil
 	*/
 	getTopic := l.GetPublishGetTopic(name)
-	data := PublishGetData(l.nodename, l.namespace, name, options)
+	data := PublishGetData(true, l.nodename, l.namespace, name, options)
 
 	if err := l.client.Send(getTopic, 1, false, data, time.Second*5); err != nil {
 		klog.Errorf("Publish get lease[%s][%s] data error %v", l.namespace, name, err)
@@ -92,7 +95,7 @@ func (l *leases) Get(ctx context.Context, name string, options metav1.GetOptions
 	}
 	ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity, time.Second*5)
 	if !ok {
-		klog.Errorf("Get ack data[%s] from timeoutCache timeout  when create lease", data.Identity)
+		klog.Errorf("Get ack data[%s] from timeoutCache timeout  when get lease", data.Identity)
 		return nil, errors.NewTimeoutError("lease", 5)
 	}
 	nl := &coordinationv1.Lease{}
@@ -102,14 +105,14 @@ func (l *leases) Get(ctx context.Context, name string, options metav1.GetOptions
 		return nil, errors.NewInternalError(err)
 	}
 
-	klog.V(5).Infof("###### get lease[%s][%s] by topic[%s]: errorInfo %v", l.namespace, name, getTopic, errInfo)
+	klog.V(4).Infof("Get lease[%s][%s] by topic[%s]: errorInfo %v", l.namespace, name, getTopic, errInfo)
 	return nl, errInfo
 }
 
 func (l *leases) Create(ctx context.Context, lease *coordinationv1.Lease, opts metav1.CreateOptions) (*coordinationv1.Lease, error) {
 
 	createTopic := l.GetPublishCreateTopic(lease.GetName())
-	data := PublishCreateData(l.nodename, lease, opts)
+	data := PublishCreateData(true, l.nodename, lease, opts)
 
 	if err := l.client.Send(createTopic, 1, false, data, time.Second*5); err != nil {
 		klog.Errorf("Publish create lease[%s][%s] data error %v", lease.Namespace, lease.Name, err)
@@ -127,13 +130,13 @@ func (l *leases) Create(ctx context.Context, lease *coordinationv1.Lease, opts m
 		return lease, errors.NewInternalError(err)
 	}
 
-	klog.V(5).Infof("###### Create lease[%s][%s] by topic[%s]: errorInfo %v", lease.GetNamespace(), lease.GetName(), createTopic, errInfo)
+	klog.V(4).Infof("Create lease[%s][%s] by topic[%s]: errorInfo %v", lease.GetNamespace(), lease.GetName(), createTopic, errInfo)
 	return nl, errInfo
 }
 
 func (l *leases) Update(ctx context.Context, lease *coordinationv1.Lease, opts metav1.UpdateOptions) (result *coordinationv1.Lease, err error) {
 	updateTopic := l.GetPublishUpdateTopic(lease.GetName())
-	data := PublishUpdateData(l.nodename, lease, opts)
+	data := PublishUpdateData(true, l.nodename, lease, opts)
 
 	if err := l.client.Send(updateTopic, 1, false, data, time.Second*5); err != nil {
 		klog.Errorf("Publish update lease[%s][%s] data error %v", lease.Namespace, lease.Name, err)
@@ -151,7 +154,7 @@ func (l *leases) Update(ctx context.Context, lease *coordinationv1.Lease, opts m
 		return lease, errors.NewInternalError(err)
 	}
 
-	klog.V(5).Infof("###### Update lease[%s][%s] by topic[%s]: errorInfo %v", lease.GetNamespace(), lease.GetName(), updateTopic, errInfo)
+	klog.V(4).Infof("Update lease[%s][%s] by topic[%s]: errorInfo %v", lease.GetNamespace(), lease.GetName(), updateTopic, errInfo)
 	return nl, errInfo
 }
 
