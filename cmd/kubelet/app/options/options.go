@@ -60,12 +60,17 @@ type KubeletFlags struct {
 	MqttBroker string
 	// The port of mqtt brocker
 	MqttBrokerPort int
-	// The clientid of mqtt brocker
-	MqttClientID string
-	// The username of mqtt brocker
-	MqttUserName string
-	// The password of mqtt brocker
-	MqttPassword string
+	// The root topic of mqtt brocker
+	MqttRootTopic string
+
+	// The access key of mqtt
+	MqttAccessKey string
+	// The secret key of mqtt
+	MqttSecretKey string
+	// the mqtt group
+	MqttGroup string
+	// the mqtt instance
+	MqttInstance string
 
 	// Insert a probability of random errors during calls to the master.
 	ChaosChance float64
@@ -228,6 +233,32 @@ func ValidateKubeletFlags(f *KubeletFlags) error {
 		return fmt.Errorf("unknown 'kubernetes.io' or 'k8s.io' labels specified with --node-labels: %v\n--node-labels in the 'kubernetes.io' namespace must begin with an allowed prefix (%s) or be in the specifically allowed set (%s)", unknownLabels.List(), strings.Join(kubeletapis.KubeletLabelNamespaces(), ", "), strings.Join(kubeletapis.KubeletLabels(), ", "))
 	}
 
+	if f.MqttBrokerPort == 0 {
+		return fmt.Errorf("need set --mqtt-broker-port")
+	}
+	if len(f.MqttBroker) == 0 {
+		return fmt.Errorf("need set --mqtt-broker")
+	}
+
+	if len(f.MqttRootTopic) == 0 {
+		return fmt.Errorf("need set --mqtt-root-topic")
+	}
+
+	if len(f.MqttAccessKey) == 0 {
+		return fmt.Errorf("need set --mqtt-access-key")
+	}
+
+	if len(f.MqttSecretKey) == 0 {
+		return fmt.Errorf("need set --mqtt-secret-key")
+	}
+
+	if len(f.MqttGroup) == 0 {
+		return fmt.Errorf("need set --mqtt-group")
+	}
+
+	if len(f.MqttInstance) == 0 {
+		return fmt.Errorf("need set --mqtt-instance")
+	}
 	return nil
 }
 
@@ -339,10 +370,13 @@ func (f *KubeletFlags) AddFlags(mainfs *pflag.FlagSet) {
 	fs.StringVar(&f.KubeConfig, "kubeconfig", f.KubeConfig, "Path to a kubeconfig file, specifying how to connect to the API server. Providing --kubeconfig enables API server mode, omitting --kubeconfig enables standalone mode.")
 
 	fs.StringVar(&f.MqttBroker, "mqtt-broker", f.MqttBroker, "the address of mqtt broker")
+	fs.StringVar(&f.MqttRootTopic, "mqtt-root-topic", f.MqttRootTopic, "the root topic of mqtt broker")
 	fs.IntVar(&f.MqttBrokerPort, "mqtt-broker-port", f.MqttBrokerPort, "the port of mqtt broker")
-	fs.StringVar(&f.MqttClientID, "mqtt-clientid", f.MqttClientID, "mqtt client id")
-	fs.StringVar(&f.MqttUserName, "mqtt-username", f.MqttUserName, "mqtt username")
-	fs.StringVar(&f.MqttPassword, "mqtt-password", f.MqttPassword, "mqtt password")
+
+	fs.StringVar(&f.MqttAccessKey, "mqtt-access-key", f.MqttAccessKey, "mqtt access key")
+	fs.StringVar(&f.MqttSecretKey, "mqtt-secret-key", f.MqttSecretKey, "mqtt secret key")
+	fs.StringVar(&f.MqttGroup, "mqtt-group", f.MqttGroup, "mqtt group name")
+	fs.StringVar(&f.MqttInstance, "mqtt-instance", f.MqttInstance, "mqtt instancename")
 
 	fs.StringVar(&f.BootstrapKubeconfig, "bootstrap-kubeconfig", f.BootstrapKubeconfig, "Path to a kubeconfig file that will be used to get client certificate for kubelet. "+
 		"If the file specified by --kubeconfig does not exist, the bootstrap kubeconfig is used to request a client certificate from the API server. "+

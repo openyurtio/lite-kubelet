@@ -3,12 +3,12 @@ package v1
 import (
 	corev1 "k8s.io/api/core/v1"
 	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
-	"k8s.io/kubernetes/pkg/openyurt/mqtt/client"
+	"k8s.io/kubernetes/pkg/openyurt/message"
 )
 
 // FakeEvents implements EventInterface
 type FakeEvents struct {
-	LocalClient client.KubeletOperatorInterface
+	LocalClient message.KubeletOperatorInterface
 	fakecorev1.FakeEvents
 	ns string
 }

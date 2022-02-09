@@ -1,9 +1,23 @@
-package client
+/*
+Copyright 2022 The OpenYurt Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+package message
 
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -22,7 +36,6 @@ type NodesGetter interface {
 }
 
 type NodeInstance interface {
-	PublishTopicor
 	Create(ctx context.Context, node *corev1.Node, opts v1.CreateOptions) (result *corev1.Node, err error)
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *corev1.Node, err error)
 	Get(ctx context.Context, name string, options v1.GetOptions) (result *corev1.Node, err error)
@@ -34,35 +47,11 @@ type nodes struct {
 	client   MessageSendor
 }
 
-func (n *nodes) GetPublishGetTopic(name string) string {
-	return filepath.Join(n.GetPublishPreTopic(), name, "get")
-}
-func (n *nodes) GetPublishDeleteTopic(name string) string {
-	return filepath.Join(n.GetPublishPreTopic(), name, "delete")
-}
-
-func (n *nodes) GetPublishCreateTopic(name string) string {
-	return filepath.Join(n.GetPublishPreTopic(), name, "create")
-}
-
-func (n *nodes) GetPublishUpdateTopic(name string) string {
-	return filepath.Join(n.GetPublishPreTopic(), name, "update")
-}
-
-func (n *nodes) GetPublishPatchTopic(name string) string {
-	return filepath.Join(n.GetPublishPreTopic(), name, "patch")
-}
-
-func (n *nodes) GetPublishPreTopic() string {
-	return filepath.Join(MqttEdgePublishRootTopic, "nodes")
-}
-
 func (n *nodes) Create(ctx context.Context, node *corev1.Node, opts v1.CreateOptions) (result *corev1.Node, err error) {
 
-	createTopic := n.GetPublishCreateTopic(node.GetName())
-	data := PublishCreateData(true, n.nodename, node, opts)
+	data := PublishCreateData(ObjectTypeNode, true, n.nodename, node, opts)
 
-	if err := n.client.Send(createTopic, 1, false, data, time.Second*5); err != nil {
+	if err := n.client.Send(data); err != nil {
 		klog.Errorf("Publish create node[%s] data error %v", node.Name, err)
 		return nil, apierrors.NewInternalError(fmt.Errorf("publish create node data error %v", err))
 	}
@@ -72,21 +61,24 @@ func (n *nodes) Create(ctx context.Context, node *corev1.Node, opts v1.CreateOpt
 		return node, errors.NewTimeoutError("node", 5)
 	}
 	nl := &corev1.Node{}
-	errInfo, err := ackdata.UnmarshalPublishAckData(nl)
+	errInfo, err := ackdata.UnmarshalAckData(nl)
 	if err != nil {
 		klog.Errorf("publish ack data unmarshal error %v,data:\n%v", err, *ackdata)
 		return node, errors.NewInternalError(err)
 	}
 
-	klog.V(4).Infof("[%s] Create node [%s] by topic[%s]: errorInfo %v", ackdata.Identity, node.GetName(), createTopic, errInfo)
+	klog.V(4).Infof("[%s] Create node [%s] errorInfo %v", ackdata.Identity, node.GetName(), errInfo)
 	return nl, errInfo
 }
 
 func (n *nodes) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *corev1.Node, err error) {
-	patchTopic := n.GetPublishPatchTopic(name)
-	patchData := PublishPatchData(true, n.nodename, name, "", nil, pt, data, opts, subresources...)
+	patchData := PublishPatchData(ObjectTypeNode, true, n.nodename, &corev1.Node{
+		ObjectMeta: v1.ObjectMeta{
+			Name: name,
+		},
+	}, pt, data, opts, subresources...)
 
-	if err := n.client.Send(patchTopic, 1, false, patchData, time.Second*5); err != nil {
+	if err := n.client.Send(patchData); err != nil {
 		klog.Errorf("Publish patch node[%s] data error %v", name, err)
 		return nil, apierrors.NewInternalError(fmt.Errorf("publish patch node data error %v", err))
 	}
@@ -96,13 +88,13 @@ func (n *nodes) Patch(ctx context.Context, name string, pt types.PatchType, data
 		return nil, errors.NewTimeoutError("node", 5)
 	}
 	nl := &corev1.Node{}
-	errInfo, err := ackdata.UnmarshalPublishAckData(nl)
+	errInfo, err := ackdata.UnmarshalAckData(nl)
 	if err != nil {
 		klog.Errorf("publish ack data unmarshal error %v,data:\n%v", err, *ackdata)
 		return nil, errors.NewInternalError(err)
 	}
 
-	klog.V(4).Infof("Patch node [%s] by topic[%s]: errorInfo %v", name, patchTopic, errInfo)
+	klog.V(4).Infof("Patch node [%s] errorInfo %v", name, errInfo)
 	return nl, errInfo
 }
 

@@ -94,7 +94,7 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/server"
 	"k8s.io/kubernetes/pkg/kubelet/stats/pidlimit"
 	yurtclientset "k8s.io/kubernetes/pkg/openyurt/clientSet"
-	localclient "k8s.io/kubernetes/pkg/openyurt/mqtt/client"
+	localclient "k8s.io/kubernetes/pkg/openyurt/message"
 	utilfs "k8s.io/kubernetes/pkg/util/filesystem"
 	"k8s.io/kubernetes/pkg/util/flock"
 	nodeutil "k8s.io/kubernetes/pkg/util/node"
@@ -595,14 +595,16 @@ func run(ctx context.Context, s *options.KubeletServer, kubeDeps *kubelet.Depend
 			string(nodeName),
 			s.MqttBroker,
 			s.MqttBrokerPort,
-			s.MqttClientID,
-			s.MqttUserName,
-			s.MqttPassword,
+			s.MqttAccessKey,
+			s.MqttSecretKey,
+			s.MqttInstance,
+			s.MqttGroup,
+			s.MqttRootTopic,
 		)
 		if err != nil {
 			return err
 		}
-		lc.SubscribeTopics(string(nodeName))
+		//lc.SubscribeTopics(string(nodeName))
 		kubeDeps.NodesIndexer = lc.GetNodesIndexer()
 		kubeDeps.HeartbeatClient = yurtclientset.NewSimpleClientset(lc)
 		kubeDeps.KubeClient = kubeDeps.HeartbeatClient

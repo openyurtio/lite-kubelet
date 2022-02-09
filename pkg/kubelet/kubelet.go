@@ -33,7 +33,7 @@ import (
 
 	"k8s.io/kubernetes/pkg/openyurt/fileCache"
 
-	"k8s.io/kubernetes/pkg/openyurt/mqtt/manifest"
+	"k8s.io/kubernetes/pkg/openyurt/manifest"
 
 	cadvisorapi "github.com/google/cadvisor/info/v1"
 	"k8s.io/mount-utils"

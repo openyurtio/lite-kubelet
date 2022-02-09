@@ -9,17 +9,17 @@ import (
 	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
 	openyurtcoordinationv1 "k8s.io/kubernetes/pkg/openyurt/clientSet/typed/coordination/v1"
 	openyurtcorev1 "k8s.io/kubernetes/pkg/openyurt/clientSet/typed/core/v1"
-	"k8s.io/kubernetes/pkg/openyurt/mqtt/client"
+	"k8s.io/kubernetes/pkg/openyurt/message"
 )
 
 // Clientset implement clientset.Interface clientset "k8s.io/client-go/kubernetes"
 type Clientset struct {
 	*fakekube.Clientset
-	LocalClient client.KubeletOperatorInterface
+	LocalClient message.KubeletOperatorInterface
 }
 
 // NewSimpleClientset is new clientset.Interface by mqtt
-func NewSimpleClientset(metaClient client.KubeletOperatorInterface) clientset.Interface {
+func NewSimpleClientset(metaClient message.KubeletOperatorInterface) clientset.Interface {
 	return &Clientset{
 		Clientset:   fakekube.NewSimpleClientset(),
 		LocalClient: metaClient}

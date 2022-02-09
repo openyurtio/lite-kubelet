@@ -7,12 +7,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
-	"k8s.io/kubernetes/pkg/openyurt/mqtt/client"
+	"k8s.io/kubernetes/pkg/openyurt/message"
 )
 
 // FakeNodes implements NodeInterface
 type FakeNodes struct {
-	LocalClient client.KubeletOperatorInterface
+	LocalClient message.KubeletOperatorInterface
 	fakecorev1.FakeNodes
 }
 

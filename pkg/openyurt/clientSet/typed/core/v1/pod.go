@@ -8,12 +8,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
-	"k8s.io/kubernetes/pkg/openyurt/mqtt/client"
+	"k8s.io/kubernetes/pkg/openyurt/message"
 )
 
 // FakePods implements PodInterface
 type FakePods struct {
-	LocalClient client.KubeletOperatorInterface
+	LocalClient message.KubeletOperatorInterface
 	fakecorev1.FakePods
 	ns string
 }

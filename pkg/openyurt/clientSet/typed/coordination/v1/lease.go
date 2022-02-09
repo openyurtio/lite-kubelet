@@ -6,12 +6,12 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakecoordinationv1 "k8s.io/client-go/kubernetes/typed/coordination/v1/fake"
-	"k8s.io/kubernetes/pkg/openyurt/mqtt/client"
+	"k8s.io/kubernetes/pkg/openyurt/message"
 )
 
 // FakeLeases implements LeasesInterface
 type FakeLeases struct {
-	LocalClient client.KubeletOperatorInterface
+	LocalClient message.KubeletOperatorInterface
 	fakecoordinationv1.FakeLeases
 	ns string
 }
