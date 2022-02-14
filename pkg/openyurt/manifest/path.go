@@ -17,6 +17,10 @@ func GetNodesManifestPath() string {
 	return filepath.Join(MQTTManifestRootPath, "nodes")
 }
 
+func GetSecretManifestPath() string {
+	return filepath.Join(MQTTManifestRootPath, "secrets")
+}
+
 func GetLeasesManifestPath() string {
 	return filepath.Join(MQTTManifestRootPath, "leases")
 }
@@ -25,11 +29,20 @@ func GetEventsManifestPath() string {
 	return filepath.Join(MQTTManifestRootPath, "events")
 }
 
+func GetConfigmapsManifestPath() string {
+	return filepath.Join(MQTTManifestRootPath, "configmaps")
+}
+
+func GetServicesManifestPath() string {
+	return filepath.Join(MQTTManifestRootPath, "services")
+}
+
 func MkdirAllSubManifestPath() {
 	allManifestPath := make([]string, 0, 5)
 	allManifestPath = append(allManifestPath,
 		GetPodsManifestPath(),
 		GetNodesManifestPath(),
+		GetSecretManifestPath(),
 	)
 
 	for _, p := range allManifestPath {

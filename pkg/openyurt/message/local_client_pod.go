@@ -18,6 +18,7 @@ package message
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -27,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
+	"k8s.io/kubernetes/pkg/openyurt/fileCache"
 )
 
 type PodsGetter interface {
@@ -47,14 +49,38 @@ type pods struct {
 	index     cache.Indexer
 }
 
-func (p *pods) Get(ctx context.Context, name string, options metav1.GetOptions) (result *corev1.Pod, err error) {
-
-	data := PublishGetData(ObjectTypePod, true, p.nodename, &corev1.Pod{
+func (p *pods) deleteLocalCache(name string) error {
+	podTmp := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: p.namespace,
 		},
-	}, options)
+	}
+
+	filePath, err := fileCache.NewDefaultFilePodDeps().GetFullFileName(podTmp)
+	if err != nil {
+		return fmt.Errorf("get object filename error %v", err)
+	}
+
+	err = os.RemoveAll(filePath)
+	if err != nil {
+		klog.Errorf("Remove cache file %s error %v", filePath, err)
+		// no need return
+	} else {
+		klog.Infof("Can not find pod[%s/%s] from cloud, so delete localcache file %s succefully",
+			podTmp.GetNamespace(), podTmp.GetName(), filePath)
+	}
+	return nil
+}
+
+func (p *pods) Get(ctx context.Context, name string, options metav1.GetOptions) (result *corev1.Pod, err error) {
+	podTmp := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: p.namespace,
+		},
+	}
+	data := PublishGetData(ObjectTypePod, true, p.nodename, podTmp, options)
 
 	if err := p.client.Send(data); err != nil {
 		klog.Errorf("Publish get pod[%s][%s] data error %v", p.namespace, name, err)
@@ -70,6 +96,13 @@ func (p *pods) Get(ctx context.Context, name string, options metav1.GetOptions) 
 	if err != nil {
 		klog.Errorf("ack data unmarshal error %v,data:\n%v", err, *ackdata)
 		return nil, errors.NewInternalError(err)
+	}
+
+	if errInfo != nil && apierrors.IsNotFound(errInfo) {
+		if err := p.deleteLocalCache(name); err != nil {
+			klog.Error("Delete local pod cache error %v", err)
+			// no need return
+		}
 	}
 
 	klog.V(4).Infof("Get pod[%s][%s] errorInfo %v", p.namespace, name, errInfo)
@@ -101,13 +134,21 @@ func (p *pods) Create(ctx context.Context, pod *corev1.Pod, opts metav1.CreateOp
 }
 
 func (p *pods) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	// first delete local manifiest
 
-	data := PublishDeleteData(ObjectTypePod, true, p.nodename, &corev1.Pod{
+	podTmp := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: p.namespace,
 			Name:      name,
 		},
-	}, opts)
+	}
+
+	if err := p.deleteLocalCache(name); err != nil {
+		klog.Error("Delete local pod cache error %v", err)
+		// no need return
+	}
+
+	data := PublishDeleteData(ObjectTypePod, true, p.nodename, podTmp, opts)
 
 	if err := p.client.Send(data); err != nil {
 		klog.Errorf("Publish delete pod[%s][%s] data error %v", p.namespace, name, err)

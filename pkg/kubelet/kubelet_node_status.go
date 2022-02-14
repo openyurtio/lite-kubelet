@@ -540,6 +540,7 @@ func (kl *Kubelet) tryUpdateNodeStatus(tryNumber int) error {
 			// This also cannot be populated on node status manager init because the volume
 			// may not have been added to dsw at that time.
 			kl.volumeManager.MarkVolumesAsReportedInUse(node.Status.VolumesInUse)
+			klog.Infof("podCIDRChanged no changed, node status no changed, so do not patch node")
 			return nil
 		}
 	}

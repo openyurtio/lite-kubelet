@@ -18,6 +18,8 @@ package message
 import (
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"sigs.k8s.io/yaml"
 )
 
@@ -28,8 +30,13 @@ const (
 )
 
 type SubscribeData struct {
-	DataType string      `json:"data_type,omitempty"`
-	Data     interface{} `json:"data,omitempty"`
+	DataType string `json:"data_type,omitempty"`
+	//Data           interface{}         `json:"data,omitempty"`
+	PodData        *corev1.Pod         `json:"pod_data,omitempty"`
+	NodeData       *corev1.Node        `json:"node_data,omitempty"`
+	AckData        *AckData            `json:"ack_data,omitempty"`
+	SecretsData    []*corev1.Secret    `json:"secrets_data,omitempty"`
+	ConfigmapsData []*corev1.ConfigMap `json:"configmaps_data,omitempty"`
 }
 
 type AckData struct {
@@ -37,6 +44,12 @@ type AckData struct {
 	Error     interface{} `json:"error,omitempty"`
 	Identity  string      `json:"identity,omitempty"`
 	ErrorType ErrorType   `json:"error_type,omitempty"`
+}
+
+type AckDataStartObject struct {
+	PodsList      []*corev1.Pod       `json:"pods_list,omitempty"`
+	SecretList    []*corev1.Secret    `json:"secret_list,omitempty"`
+	ConfigMapList []*corev1.ConfigMap `json:"config_map_list,omitempty"`
 }
 
 func (p *AckData) String() string {

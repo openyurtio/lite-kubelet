@@ -896,18 +896,15 @@ func (kl *Kubelet) makePodDataDirs(pod *v1.Pod) error {
 func (kl *Kubelet) getPullSecretsForPod(pod *v1.Pod) []v1.Secret {
 	pullSecrets := []v1.Secret{}
 
-	// DELETE BY zhangjie 暂时不使用私有镜像下载， 下载镜像，通过别的方式，预先下载
-	/*
-		for _, secretRef := range pod.Spec.ImagePullSecrets {
-			secret, err := kl.secretManager.GetSecret(pod.Namespace, secretRef.Name)
-			if err != nil {
-				klog.Warningf("Unable to retrieve pull secret %s/%s for %s/%s due to %v.  The image pull may not succeed.", pod.Namespace, secretRef.Name, pod.Namespace, pod.Name, err)
-				continue
-			}
-
-			pullSecrets = append(pullSecrets, *secret)
+	for _, secretRef := range pod.Spec.ImagePullSecrets {
+		secret, err := kl.secretManager.GetSecret(pod.Namespace, secretRef.Name)
+		if err != nil {
+			klog.Warningf("Unable to retrieve pull secret %s/%s for %s/%s due to %v.  The image pull may not succeed.", pod.Namespace, secretRef.Name, pod.Namespace, pod.Name, err)
+			continue
 		}
-	*/
+
+		pullSecrets = append(pullSecrets, *secret)
+	}
 
 	return pullSecrets
 }
@@ -1110,8 +1107,7 @@ func (kl *Kubelet) HandlePodCleanups() error {
 	}
 	// Stop the workers for no-longer existing pods.
 	kl.podWorkers.ForgetNonExistingPodWorkers(desiredPods)
-	// DELETE BY zhangjie
-	// kl.probeManager.CleanupPods(desiredPods)
+	kl.probeManager.CleanupPods(desiredPods)
 
 	runningPods, err := kl.runtimeCache.GetPods()
 	if err != nil {
@@ -1533,8 +1529,7 @@ func (kl *Kubelet) generateAPIPodStatus(pod *v1.Pod, podStatus *kubecontainer.Po
 			s.Phase = pod.Status.Phase
 		}
 	}
-	// DELETED BY zhangjie
-	// kl.probeManager.UpdatePodStatus(pod.UID, s)
+	kl.probeManager.UpdatePodStatus(pod.UID, s)
 	s.Conditions = append(s.Conditions, status.GeneratePodInitializedCondition(spec, s.InitContainerStatuses, s.Phase))
 	s.Conditions = append(s.Conditions, status.GeneratePodReadyCondition(spec, s.Conditions, s.ContainerStatuses, s.Phase))
 	s.Conditions = append(s.Conditions, status.GenerateContainersReadyCondition(spec, s.ContainerStatuses, s.Phase))

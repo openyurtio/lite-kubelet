@@ -17,24 +17,20 @@ package message
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/openyurt/fileCache"
-	"k8s.io/kubernetes/pkg/openyurt/manifest"
 	"sigs.k8s.io/yaml"
 )
 
 func subscribeHandlers(nodeName, rootTopic string) map[string]mqtt.MessageHandler {
 	handlers := make(map[string]mqtt.MessageHandler)
-	handlers[GetPublishTopic(rootTopic, nodeName)] = func(client mqtt.Client, mes mqtt.Message) {
+	handlers[GetCtlTopic(rootTopic, nodeName)] = func(client mqtt.Client, mes mqtt.Message) {
 		subcribeData, err := UnmarshalPayloadToSubscribeData(mes.Payload())
 		if err != nil {
 			klog.Errorf("Unmarshal message payload[topic %s] to subscribedata error %v.", mes.Topic(), err)
@@ -51,74 +47,133 @@ func subscribeHandlers(nodeName, rootTopic string) map[string]mqtt.MessageHandle
 func dealWithSubcribeDate(subcribeData *SubscribeData) error {
 	switch subcribeData.DataType {
 	case SubscribeDataTypeAck:
-		d := &AckData{}
-		dateBytes, err := json.Marshal(subcribeData.Data)
-		if err != nil {
-			klog.Errorf("SubcribeData.Data Marshal byte error %v", err)
-			return err
-		}
-		if err := json.Unmarshal(dateBytes, d); err != nil {
-			klog.Errorf("SubcribeData.Data UnMarshal AckData object error %v", err)
-			return err
-		}
+		d := subcribeData.AckData
+		//&AckData{}
+		/*
+			dateBytes, err := json.Marshal(subcribeData.Data)
+			if err != nil {
+				klog.Errorf("SubcribeData.Data Marshal byte error %v", err)
+				return err
+			}
+			if err := json.Unmarshal(dateBytes, d); err != nil {
+				klog.Errorf("SubcribeData.Data UnMarshal AckData object error %v", err)
+				return err
+			}
+		*/
 		GetDefaultTimeoutCache().Set(d)
 		klog.V(2).Infof("Subscribe ack payload %s successful", d)
 	case SubscribeDataTypeNode:
-		d := &corev1.Node{}
-		dateBytes, err := yaml.Marshal(subcribeData.Data)
-		if err != nil {
-			klog.Errorf("SubcribeData.Data Marshal byte error %v", err)
-			return err
-		}
-		if err := yaml.Unmarshal(dateBytes, d); err != nil {
-			klog.Errorf("SubcribeData.Data UnMarshal Node object error %v", err)
-			return err
-		}
-		if err := saveToObjectFile(dateBytes, d, manifest.GetNodesManifestPath()); err != nil {
+		if err := saveNodeToObjectFile(subcribeData.NodeData); err != nil {
 			klog.Errorf("Save node object to file error %v", err)
 			return err
 		}
-		klog.V(2).Infof("Subscribe node payload %s successful", d)
+		klog.V(4).Infof("Subscribe node payload %s to localcache successful", subcribeData.NodeData.Name)
 	case SubscribeDataTypePod:
-		d := &corev1.Pod{}
-		dateBytes, err := yaml.Marshal(subcribeData.Data)
-		if err != nil {
-			klog.Errorf("SubcribeData.Data Marshal byte error %v", err)
-			return err
+		for i, _ := range subcribeData.SecretsData {
+			s := subcribeData.SecretsData[i]
+			if s == nil {
+				continue
+			}
+			if err := saveSecretToObjectFile(s); err != nil {
+				klog.Error("save secret to objectfile error %v", err)
+				continue
+			}
 		}
-		if err := yaml.Unmarshal(dateBytes, d); err != nil {
-			klog.Errorf("SubcribeData.Data UnMarshal Node object error %v", err)
-			return err
-		}
-		if err := saveToObjectFile(dateBytes, d, manifest.GetPodsManifestPath()); err != nil {
+
+		if err := savePodToObjectFile(subcribeData.PodData); err != nil {
 			klog.Errorf("Save pod object to file error %v", err)
 			return err
 		}
-		klog.V(2).Infof("Subscribe pod payload %s successful", d)
+
+		klog.V(2).Infof("Subscribe pod payload [%s/%s] to localcache successful", subcribeData.PodData.GetNamespace(), subcribeData.PodData.GetName())
 	default:
 		return fmt.Errorf("wrong subscribedata type %s", subcribeData.DataType)
 	}
 	return nil
 }
 
-func saveToObjectFile(payload []byte, obj metav1.Object, objectManifestPath string) error {
+func saveNodeToObjectFile(s *corev1.Node) error {
 
-	name, err := fileCache.CreateFileNameByNamespacedObject(obj)
+	dateBytes, err := yaml.Marshal(s)
 	if err != nil {
-		return fmt.Errorf("get object filename error %v", err)
+		klog.Errorf("Marshal node[%s/%s] to bytes error %v",
+			s.GetNamespace(), s.GetName(), err)
+		return err
 	}
-	filePath := filepath.Join(objectManifestPath, name)
+	path, err := fileCache.NewDefaultFileNodeDeps().GetFullFileName(s)
+	if err != nil {
+		klog.Errorf("Get node object %++v full file name error %v", *s, err)
+		return err
+	}
+	if err := saveToObjectFile(dateBytes, path); err != nil {
+		klog.Errorf("Save node object[%s] to file error %v", s.GetName(), err)
+		return err
+	}
+	return nil
+}
 
-	if obj.GetDeletionTimestamp() != nil {
-		klog.Warningf("Find object[%v/%v] deletionTimestamp is not nil , need to delete localcachefile %s", obj.GetNamespace(), obj.GetName(), filePath)
-		err = os.RemoveAll(filePath)
-		if err != nil {
-			klog.Errorf("Remove cache file %s error %v", filePath, err)
-			return err
-		}
-		klog.Warningf("Delete localcache file %s succefully", filePath)
-		return nil
+func savePodToObjectFile(s *corev1.Pod) error {
+
+	dateBytes, err := yaml.Marshal(s)
+	if err != nil {
+		klog.Errorf("Marshal pod[%s/%s] to bytes error %v",
+			s.GetNamespace(), s.GetName(), err)
+		return err
 	}
+	path, err := fileCache.NewDefaultFilePodDeps().GetFullFileName(s)
+	if err != nil {
+		klog.Errorf("Get pod object %++v full file name error %v", *s, err)
+		return err
+	}
+	if err := saveToObjectFile(dateBytes, path); err != nil {
+		klog.Errorf("Save pod object[%s/%s] to file error %v", s.GetNamespace(), s.GetName(), err)
+		return err
+	}
+	return nil
+}
+
+func saveSecretToObjectFile(s *corev1.Secret) error {
+
+	dateBytes, err := yaml.Marshal(s)
+	if err != nil {
+		klog.Errorf("Marshal secret[%s/%s] to bytes error %v",
+			s.GetNamespace(), s.GetName(), err)
+		return err
+	}
+	path, err := fileCache.NewDefaultFileSecretDeps().GetFullFileName(s)
+	if err != nil {
+		klog.Errorf("Get secret object %++v full file name error %v", *s, err)
+		return err
+	}
+	if err := saveToObjectFile(dateBytes, path); err != nil {
+		klog.Errorf("Save secrect object[%s/%s] to file error %v", s.GetNamespace(), s.GetName(), err)
+		return err
+	}
+	return nil
+}
+
+func saveToObjectFile(payload []byte, filePath string) error {
+
+	/*
+		name, err := fileCache.CreateFileNameByObject(obj)
+		if err != nil {
+			return fmt.Errorf("get object filename error %v", err)
+		}
+		filePath := filepath.Join(objectManifestPath, name)
+	*/
+
+	/*
+		if obj.GetDeletionTimestamp() != nil {
+			klog.Warningf("Find object[%v/%v] deletionTimestamp is not nil , need to delete localcachefile %s", obj.GetNamespace(), obj.GetName(), filePath)
+			err = os.RemoveAll(filePath)
+			if err != nil {
+				klog.Errorf("Remove cache file %s error %v", filePath, err)
+				return err
+			}
+			klog.Warningf("Delete localcache file %s succefully", filePath)
+			return nil
+		}
+	*/
 
 	// must use CREATE AND TRUNC
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)

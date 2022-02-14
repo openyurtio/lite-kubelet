@@ -18,7 +18,7 @@ function buildbin() {
 	KUBE_BUILD_PLATFORMS=linux/amd64 make WHAT=cmd/kubelet GOFLAGS=-v 
 
 	echo "现在的kubelet 大小:"
-	date 2>&1 | >> kubelet.txt
+	date 2>&1 | >> /tmp/kubelet.txt
 	du -m ${LINUX_KUBELET_BIN}
 
 }

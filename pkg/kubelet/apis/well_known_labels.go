@@ -32,7 +32,7 @@ const (
 	LabelArch = "beta.kubernetes.io/arch"
 
 	// ADDED by zhangjie
-	LabelLite      = "openyurt.io/type"
+	LabelLite      = "openyurt.io/node-type"
 	LabelLiteValue = "lite-node"
 )
 

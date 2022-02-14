@@ -22,8 +22,12 @@ import (
 	"path/filepath"
 )
 
-func GetPublishTopic(rootTopic, nodeName string) string {
-	return filepath.Join(rootTopic, "cloud", nodeName)
+func GetCtlTopic(rootTopic, nodeName string) string {
+	return filepath.Join(rootTopic, "ctl", nodeName)
+}
+
+func GetDataTopic(rootTopic string) string {
+	return filepath.Join(rootTopic, "data")
 }
 
 func GetSignature(input, key string) string {

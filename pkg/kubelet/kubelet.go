@@ -31,6 +31,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"k8s.io/kubernetes/pkg/openyurt/oySecret"
+
+	"k8s.io/kubernetes/pkg/openyurt/oyProber"
+
 	"k8s.io/kubernetes/pkg/openyurt/fileCache"
 
 	"k8s.io/kubernetes/pkg/openyurt/manifest"
@@ -170,9 +174,7 @@ const (
 	minDeadContainerInPod = 1
 
 	// nodeLeaseRenewIntervalFraction is the fraction of lease duration to renew the lease
-	// CHANGED BY zhangjie , 0.25 to 0.5
-	nodeLeaseRenewIntervalFraction = 0.5
-	// nodeLeaseRenewIntervalFraction = 0.25
+	nodeLeaseRenewIntervalFraction = 0.25
 )
 
 // SyncHandler is an interface implemented by Kubelet, for testability
@@ -267,21 +269,18 @@ func makePodSourceConfig(kubeCfg *kubeletconfiginternal.KubeletConfiguration, ku
 		config.NewSourceFile(kubeCfg.StaticPodPath, nodeName, kubeCfg.FileCheckFrequency.Duration, cfg.Channel(kubetypes.FileSource), kubetypes.FileSource)
 	}
 
-	podMqttPath := manifest.GetPodsManifestPath()
-	klog.Infof("Adding pod mqtt path: %v", podMqttPath)
-
 	updates := cfg.Channel(kubetypes.MqttFileSource)
 	send := func(cache cache.Indexer) {
 		pods := make([]*v1.Pod, 0, 10)
 		for _, o := range cache.List() {
 			if p, ok := o.(*v1.Pod); ok {
-				klog.V(4).Infof("Get Pod [%s][%s] from local mqtt cache path %s", p.GetNamespace(), p.GetName(), podMqttPath)
+				klog.V(4).Infof("Get Pod [%s][%s] from local mqtt cache", p.GetNamespace(), p.GetName())
 				pods = append(pods, p)
 			}
 		}
 		updates <- kubetypes.PodUpdate{Pods: pods, Op: kubetypes.SET, Source: kubetypes.MqttFileSource}
 	}
-	fileCache.NewFileObiectIndexer(fileCache.NewDefaultFilePodDeps(podMqttPath), false, send)
+	fileCache.NewFileObiectIndexer(fileCache.NewDefaultFilePodDeps(), false, send)
 
 	// define url config source
 	// DELETED BY zhangjie
@@ -602,6 +601,10 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 			return nil, fmt.Errorf("unknown configmap and secret manager mode: %v", kubeCfg.ConfigMapAndSecretChangeDetectionStrategy)
 		}
 	*/
+	sercretIndexer := fileCache.NewFileObiectIndexer(
+		fileCache.NewDefaultFileSecretDeps(), false, nil)
+
+	secretManager = oySecret.NewSecretManager(sercretIndexer)
 
 	klet.secretManager = secretManager
 	klet.configMapManager = configMapManager
@@ -769,6 +772,12 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 			klet.runner,
 			kubeDeps.Recorder)
 	*/
+	// ADDED by zhangjie
+	klet.probeManager = oyProber.NewManager(klet.statusManager,
+		klet.livenessManager,
+		klet.startupManager,
+		klet.runner,
+		kubeDeps.Recorder)
 
 	tokenManager := token.NewManager(kubeDeps.KubeClient)
 
@@ -1518,8 +1527,7 @@ func (kl *Kubelet) Run(updates <-chan kubetypes.PodUpdate) {
 
 	// Start component sync loops.
 	kl.statusManager.Start()
-	// DELETE BY zhangjie
-	// kl.probeManager.Start()
+	kl.probeManager.Start()
 
 	// Start syncing RuntimeClasses if enabled.
 	// DELETED BY zhangjie
@@ -2183,8 +2191,7 @@ func (kl *Kubelet) HandlePodAdditions(pods []*v1.Pod) {
 			klog.V(4).Infof("pod [%s][%s] can not get mirror pod", pod.GetNamespace(), pod.GetName())
 		}
 		kl.dispatchWork(pod, kubetypes.SyncPodCreate, mirrorPod, start)
-		// DLETE BY zhangjie
-		// kl.probeManager.AddPod(pod)
+		kl.probeManager.AddPod(pod)
 	}
 }
 
@@ -2218,8 +2225,7 @@ func (kl *Kubelet) HandlePodRemoves(pods []*v1.Pod) {
 		if err := kl.deletePod(pod); err != nil {
 			klog.V(2).Infof("Failed to delete pod %q, err: %v", format.Pod(pod), err)
 		}
-		// DELETE BY zhangjie
-		// kl.probeManager.RemovePod(pod)
+		kl.probeManager.RemovePod(pod)
 	}
 }
 

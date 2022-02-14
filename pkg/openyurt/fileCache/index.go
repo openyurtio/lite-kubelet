@@ -22,7 +22,7 @@ var FileNoNameSpacedSpecificError = fmt.Errorf("fileName does not meet the speci
 // FileIndexFunc knows how to compute the set of indexed values for an file.
 type FileIndexFunc func(path string) (string, error)
 
-func CreateFileNameByNamespacedObject(obj interface{}) (string, error) {
+func CreateFileNameByObject(obj interface{}) (string, error) {
 	meta, err := meta.Accessor(obj)
 	if err != nil {
 		return "", fmt.Errorf("object has no meta: %v", err)

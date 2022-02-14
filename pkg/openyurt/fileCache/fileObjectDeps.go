@@ -1,9 +1,17 @@
 package fileCache
 
 import (
+	"fmt"
+	"os"
+
+	"path/filepath"
+	"sort"
+
 	coordinationv1 "k8s.io/api/coordination/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/klog/v2"
+	"k8s.io/kubernetes/pkg/openyurt/manifest"
 )
 
 type FileObjectDeps interface {
@@ -12,6 +20,8 @@ type FileObjectDeps interface {
 	GetObjectKeyFunc() cache.KeyFunc
 	GetFileKeyFunc() FileIndexFunc
 	GetObjectString() string
+	GetAllFiles() []string
+	GetFullFileName(obj interface{}) (string, error)
 }
 
 type FileConfigMapDeps struct {
@@ -19,9 +29,21 @@ type FileConfigMapDeps struct {
 	FileKeyFunc FileIndexFunc
 }
 
-func NewDefaultFileConfigMapDeps(dir string) *FileConfigMapDeps {
+func (c *FileConfigMapDeps) GetFullFileName(obj interface{}) (string, error) {
+	name, err := CreateFileNameByObject(obj)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(c.GetDir(), name), nil
+}
+
+func (c *FileConfigMapDeps) GetAllFiles() []string {
+	return getAllFiles(c.GetDir())
+}
+
+func NewDefaultFileConfigMapDeps() *FileConfigMapDeps {
 	return &FileConfigMapDeps{
-		PathDir: dir,
+		PathDir: manifest.GetConfigmapsManifestPath(),
 	}
 }
 
@@ -50,9 +72,21 @@ type FileServiceDeps struct {
 	FileKeyFunc FileIndexFunc
 }
 
-func NewDefaultFileServiceDeps(dir string) *FileServiceDeps {
+func (f *FileServiceDeps) GetFullFileName(obj interface{}) (string, error) {
+	name, err := CreateFileNameByObject(obj)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(f.GetDir(), name), nil
+}
+
+func (f *FileServiceDeps) GetAllFiles() []string {
+	return getAllFiles(f.GetDir())
+}
+
+func NewDefaultFileServiceDeps() *FileServiceDeps {
 	return &FileServiceDeps{
-		PathDir: dir,
+		PathDir: manifest.GetServicesManifestPath(),
 	}
 }
 func (f *FileServiceDeps) GetObjectString() string {
@@ -79,9 +113,21 @@ type FileNodeDeps struct {
 	FileKeyFunc FileIndexFunc
 }
 
-func NewDefaultFileNodeDeps(dir string) *FileNodeDeps {
+func (f *FileNodeDeps) GetFullFileName(obj interface{}) (string, error) {
+	name, err := CreateFileNameByObject(obj)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(f.GetDir(), name), nil
+}
+
+func (f *FileNodeDeps) GetAllFiles() []string {
+	return getAllFiles(f.GetDir())
+}
+
+func NewDefaultFileNodeDeps() *FileNodeDeps {
 	return &FileNodeDeps{
-		PathDir: dir,
+		PathDir: manifest.GetNodesManifestPath(),
 	}
 }
 func (f *FileNodeDeps) GetObjectString() string {
@@ -109,6 +155,18 @@ type FileSecretDeps struct {
 	FileKeyFunc FileIndexFunc
 }
 
+func (f *FileSecretDeps) GetFullFileName(obj interface{}) (string, error) {
+	name, err := CreateFileNameByObject(obj)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(f.GetDir(), name), nil
+}
+
+func (f *FileSecretDeps) GetAllFiles() []string {
+	return getAllFiles(f.GetDir())
+}
+
 func (f *FileSecretDeps) GetDir() string {
 	return f.PathDir
 }
@@ -129,15 +187,27 @@ func (f *FileSecretDeps) GetObjectString() string {
 	return "Secret"
 }
 
-func NewDefaultFileSecretDeps(dir string) *FileSecretDeps {
+func NewDefaultFileSecretDeps() *FileSecretDeps {
 	return &FileSecretDeps{
-		PathDir: dir,
+		PathDir: manifest.GetSecretManifestPath(),
 	}
 }
 
 type FilePodDeps struct {
 	PathDir     string
 	FileKeyFunc FileIndexFunc
+}
+
+func (f *FilePodDeps) GetFullFileName(obj interface{}) (string, error) {
+	name, err := CreateFileNameByObject(obj)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(f.GetDir(), name), nil
+}
+
+func (f *FilePodDeps) GetAllFiles() []string {
+	return getAllFiles(f.GetDir())
 }
 
 func (f *FilePodDeps) GetDir() string {
@@ -160,15 +230,27 @@ func (f *FilePodDeps) GetObjectString() string {
 	return "Pod"
 }
 
-func NewDefaultFilePodDeps(dir string) *FilePodDeps {
+func NewDefaultFilePodDeps() *FilePodDeps {
 	return &FilePodDeps{
-		PathDir: dir,
+		PathDir: manifest.GetPodsManifestPath(),
 	}
 }
 
 type FileLeaseDeps struct {
 	PathDir     string
 	FileKeyFunc FileIndexFunc
+}
+
+func (f *FileLeaseDeps) GetFullFileName(obj interface{}) (string, error) {
+	name, err := CreateFileNameByObject(obj)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(f.GetDir(), name), nil
+}
+
+func (f *FileLeaseDeps) GetAllFiles() []string {
+	return getAllFiles(f.GetDir())
 }
 
 func (f *FileLeaseDeps) GetDir() string {
@@ -191,15 +273,27 @@ func (f *FileLeaseDeps) GetObjectString() string {
 	return "Lease"
 }
 
-func NewDefaultFileLeaseDeps(dir string) *FileLeaseDeps {
+func NewDefaultFileLeaseDeps() *FileLeaseDeps {
 	return &FileLeaseDeps{
-		PathDir: dir,
+		PathDir: manifest.GetLeasesManifestPath(),
 	}
 }
 
 type FileEventDeps struct {
 	PathDir     string
 	FileKeyFunc FileIndexFunc
+}
+
+func (f *FileEventDeps) GetFullFileName(obj interface{}) (string, error) {
+	name, err := CreateFileNameByObject(obj)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(f.GetDir(), name), nil
+}
+
+func (f *FileEventDeps) GetAllFiles() []string {
+	return getAllFiles(f.GetDir())
 }
 
 func (f *FileEventDeps) GetDir() string {
@@ -222,10 +316,44 @@ func (f *FileEventDeps) GetObjectString() string {
 	return "Event"
 }
 
-func NewDefaultFileEventDeps(dir string) *FileEventDeps {
+func NewDefaultFileEventDeps() *FileEventDeps {
 	return &FileEventDeps{
-		PathDir: dir,
+		PathDir: manifest.GetEventsManifestPath(),
 	}
+}
+
+// get all full path files
+func getAllFiles(dir string) []string {
+	names := make([]string, 0, 10)
+	dirents, err := filepath.Glob(filepath.Join(dir, fmt.Sprintf("[^.]*%s", FileSuffix)))
+	if err != nil {
+		klog.Errorf("glob dir %s failed: %v", dir, err)
+		return names
+	}
+
+	if len(dirents) == 0 {
+		return nil
+	}
+
+	sort.Strings(dirents)
+	for _, path := range dirents {
+		statInfo, err := os.Stat(path)
+		if err != nil {
+			klog.Errorf("Can't get stat for %q: %v", path, err)
+			continue
+		}
+
+		switch {
+		case statInfo.Mode().IsDir():
+			klog.Errorf("%s is dir, do nothing", path)
+		case statInfo.Mode().IsRegular():
+			//names = append(names, filepath.Base(path))
+			names = append(names, path)
+		default:
+			klog.Errorf("Path %q is not a directory or file: %v, do nothing", path, statInfo.Mode())
+		}
+	}
+	return names
 }
 
 var _ FileObjectDeps = &FileConfigMapDeps{}
