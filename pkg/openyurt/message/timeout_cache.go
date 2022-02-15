@@ -18,6 +18,8 @@ package message
 import (
 	"sync"
 	"time"
+
+	"k8s.io/klog/v2"
 )
 
 type TimeoutCache struct {
@@ -33,7 +35,7 @@ type cacheData struct {
 var timecache *TimeoutCache
 
 func init() {
-	timecache = NewTimeoutCache(time.Second*5, time.Hour*6)
+	timecache = NewTimeoutCache(time.Second*5, time.Hour*2)
 }
 
 func GetDefaultTimeoutCache() *TimeoutCache {
@@ -49,6 +51,7 @@ func NewTimeoutCache(period, timeout time.Duration) *TimeoutCache {
 	return t
 }
 
+// Expired keys in the cache are cleared every period and broadcast every period to prevent excessive data in the cache and reduce memory usage
 func (t *TimeoutCache) run(period, timeout time.Duration) {
 	ticker := time.NewTicker(period)
 	defer ticker.Stop()
@@ -59,6 +62,7 @@ func (t *TimeoutCache) run(period, timeout time.Duration) {
 			n := time.Now()
 			t.cache.Range(func(key, value interface{}) bool {
 				if n.Sub(value.(*cacheData).t) > timeout {
+					klog.Infof("key %s data %d now %d exceed %d s", key, value.(*cacheData).t.Unix(), n.Unix(), timeout.Milliseconds()/1000)
 					t.cache.Delete(key)
 				}
 				return true
@@ -68,8 +72,11 @@ func (t *TimeoutCache) run(period, timeout time.Duration) {
 	}
 }
 
-// Pop retrun false , when timeout
-func (t *TimeoutCache) Pop(key string, timeout time.Duration) (*AckData, bool) {
+// PopWait retrun false , when timeout
+// Get the key value, return true if get value, and delete it from the cache
+// If not, wait until the corresponding key and value are obtained
+// If no data is retrieved until timeout, return false
+func (t *TimeoutCache) PopWait(key string, timeout time.Duration) (*AckData, bool) {
 	ticker := time.NewTicker(timeout)
 	defer ticker.Stop()
 

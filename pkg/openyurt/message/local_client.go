@@ -102,7 +102,7 @@ func NewLocalClient(nodename, broker string, port int,
 				klog.Errorf("Send start data error when mqtt client connected. %v", err)
 				continue
 			}
-			ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity, time.Second*5)
+			ackdata, ok := GetDefaultTimeoutCache().PopWait(data.Identity, time.Second*5)
 			if !ok {
 				klog.Errorf("Get ack data[%s] from timeoutCache timeout  when get start data", data.Identity)
 				continue
