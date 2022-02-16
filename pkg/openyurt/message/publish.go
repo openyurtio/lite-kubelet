@@ -40,6 +40,7 @@ const (
 	ObjectTypeNode  = "node"
 	ObjectTypePod   = "pod"
 	ObjectTypeStart = "start"
+	ObjectTypeHB    = "heartbeat"
 )
 
 const (
@@ -49,6 +50,8 @@ const (
 	OperateTypeDelete = "delete"
 	OperateTypeGet    = "get"
 	OperateTypeStart  = "start"
+	//OperateTypeOffline = "offline"
+	OperateTypeOnline = "online"
 )
 
 type PublishData struct {
@@ -167,4 +170,8 @@ func PublishUpdateData(objectType string, needack bool, nodename string, object 
 
 func PublishStartData(nodename string) *PublishData {
 	return newPublishData(ObjectTypeStart, OperateTypeStart, true, nodename, nil, nil, "", nil, nil)
+}
+
+func PublishOnlineData(nodename string) *PublishData {
+	return newPublishData(ObjectTypeHB, OperateTypeOnline, false, nodename, nil, nil, "", nil, nil)
 }

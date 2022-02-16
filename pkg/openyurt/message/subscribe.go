@@ -27,6 +27,7 @@ const (
 	SubscribeDataTypeAck  = "ack"
 	SubscribeDataTypeNode = "node"
 	SubscribeDataTypePod  = "pod"
+	//SubscribeDataTypeRequestHeartBeat = "request-heartbeat"
 )
 
 type SubscribeData struct {

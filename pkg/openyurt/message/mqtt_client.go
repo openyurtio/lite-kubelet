@@ -25,6 +25,13 @@ import (
 	"k8s.io/klog/v2"
 )
 
+type WillOptions struct {
+	topic    string
+	payload  string
+	qos      byte
+	retained bool
+}
+
 var defaultConnectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
 	klog.V(5).Infof("Connected mqtt broker ...")
 }
@@ -34,7 +41,7 @@ var defaultConnectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Clie
 }
 
 func newSessionMqtt3Client(broker string, port int, clientid, username, passwd string) mqtt.Client {
-	return newMqtt3Client(broker, port, clientid, username, passwd, false, true, defaultConnectHandler, defaultConnectLostHandler)
+	return newMqtt3Client(broker, port, clientid, username, passwd, false, true, nil, defaultConnectHandler, defaultConnectLostHandler)
 }
 
 func newMqtt3Client(
@@ -45,6 +52,7 @@ func newMqtt3Client(
 	passwd string,
 	cleanSession bool,
 	order bool,
+	will *WillOptions,
 	connectHandler mqtt.OnConnectHandler,
 	connectLostHandler mqtt.ConnectionLostHandler) mqtt.Client {
 
@@ -52,13 +60,16 @@ func newMqtt3Client(
 	opts.AddBroker(fmt.Sprintf("ssl://%s:%d", broker, port))
 	opts.SetCleanSession(cleanSession)
 
+	if will != nil {
+		opts.SetWill(will.topic, will.payload, will.qos, will.retained)
+	}
+
 	opts.SetClientID(clientid)
 	opts.SetUsername(username)
 	opts.SetPassword(passwd)
 	opts.SetOrderMatters(order)
 	// 设置重新使用resumesub
 	opts.SetResumeSubs(true)
-
 	// Do not set default publishHandler
 	// opts.SetDefaultPublishHandler(messagePubHandler)
 	//opts.SetAutoReconnect(true)
@@ -69,7 +80,7 @@ func newMqtt3Client(
 	if connectLostHandler != nil {
 		opts.SetConnectionLostHandler(connectLostHandler)
 	}
-	//opts.SetKeepAlive(30 * time.Second)
+	opts.SetKeepAlive(5 * time.Second)
 	//opts.SetConnectTimeout(30 * time.Second)
 	//opts.SetConnectRetryInterval(10 * time.Second)
 	//opts.SetMaxReconnectInterval(10 * time.Minute)

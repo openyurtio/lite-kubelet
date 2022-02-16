@@ -36,7 +36,7 @@ func subscribeHandlers(nodeName, rootTopic string) map[string]mqtt.MessageHandle
 			klog.Errorf("Unmarshal message payload[topic %s] to subscribedata error %v.", mes.Topic(), err)
 			return
 		}
-		if err := dealWithSubcribeDate(subcribeData); err != nil {
+		if err := dealWithSubcribeDate(client, rootTopic, nodeName, subcribeData); err != nil {
 			klog.Errorf("dealWithSubcribeData %s error %v.", subcribeData, err)
 			return
 		}
@@ -44,22 +44,10 @@ func subscribeHandlers(nodeName, rootTopic string) map[string]mqtt.MessageHandle
 	return handlers
 }
 
-func dealWithSubcribeDate(subcribeData *SubscribeData) error {
+func dealWithSubcribeDate(client mqtt.Client, rootTopic, nodeName string, subcribeData *SubscribeData) error {
 	switch subcribeData.DataType {
 	case SubscribeDataTypeAck:
 		d := subcribeData.AckData
-		//&AckData{}
-		/*
-			dateBytes, err := json.Marshal(subcribeData.Data)
-			if err != nil {
-				klog.Errorf("SubcribeData.Data Marshal byte error %v", err)
-				return err
-			}
-			if err := json.Unmarshal(dateBytes, d); err != nil {
-				klog.Errorf("SubcribeData.Data UnMarshal AckData object error %v", err)
-				return err
-			}
-		*/
 		GetDefaultTimeoutCache().Set(d)
 		klog.V(2).Infof("Subscribe ack payload %s successful", d)
 	case SubscribeDataTypeNode:
@@ -86,6 +74,14 @@ func dealWithSubcribeDate(subcribeData *SubscribeData) error {
 		}
 
 		klog.V(2).Infof("Subscribe pod payload [%s/%s] to localcache successful", subcribeData.PodData.GetNamespace(), subcribeData.PodData.GetName())
+		/*
+			case SubscribeDataTypeRequestHeartBeat:
+				if err := Mqtt3Send(client, GetDataTopic(rootTopic), PublishOnlineData(nodeName)); err != nil {
+					klog.Errorf("Send heartbeat online data error %v", err)
+					return err
+				}
+				klog.V(2).Infof("Subscribe request heartbeat payload successful, and send online heartbeat data successful")
+		*/
 	default:
 		return fmt.Errorf("wrong subscribedata type %s", subcribeData.DataType)
 	}

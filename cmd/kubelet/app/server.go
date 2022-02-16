@@ -605,6 +605,9 @@ func run(ctx context.Context, s *options.KubeletServer, kubeDeps *kubelet.Depend
 			return err
 		}
 		//lc.SubscribeTopics(string(nodeName))
+		kubeDeps.NodeName = string(nodeName)
+		kubeDeps.RootTopic = s.MqttRootTopic
+		kubeDeps.LocalClient = lc
 		kubeDeps.NodesIndexer = lc.GetNodesIndexer()
 		kubeDeps.HeartbeatClient = yurtclientset.NewSimpleClientset(lc)
 		kubeDeps.KubeClient = kubeDeps.HeartbeatClient

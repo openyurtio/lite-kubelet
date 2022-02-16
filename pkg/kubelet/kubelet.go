@@ -31,18 +31,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"k8s.io/kubernetes/pkg/openyurt/oySecret"
-
-	"k8s.io/kubernetes/pkg/openyurt/oyProber"
-
-	"k8s.io/kubernetes/pkg/openyurt/fileCache"
-
-	"k8s.io/kubernetes/pkg/openyurt/manifest"
-
 	cadvisorapi "github.com/google/cadvisor/info/v1"
-	"k8s.io/mount-utils"
-	"k8s.io/utils/integer"
-
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -110,6 +99,12 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/util/queue"
 	"k8s.io/kubernetes/pkg/kubelet/util/sliceutils"
 	"k8s.io/kubernetes/pkg/kubelet/volumemanager"
+	"k8s.io/kubernetes/pkg/openyurt/fileCache"
+	"k8s.io/kubernetes/pkg/openyurt/manifest"
+	localclient "k8s.io/kubernetes/pkg/openyurt/message"
+	"k8s.io/kubernetes/pkg/openyurt/oyLeasecontroller"
+	"k8s.io/kubernetes/pkg/openyurt/oyProber"
+	"k8s.io/kubernetes/pkg/openyurt/oySecret"
 	"k8s.io/kubernetes/pkg/security/apparmor"
 	sysctlwhitelist "k8s.io/kubernetes/pkg/security/podsecuritypolicy/sysctl"
 	"k8s.io/kubernetes/pkg/util/oom"
@@ -118,6 +113,8 @@ import (
 	"k8s.io/kubernetes/pkg/volume/util/hostutil"
 	"k8s.io/kubernetes/pkg/volume/util/subpath"
 	"k8s.io/kubernetes/pkg/volume/util/volumepathhandler"
+	"k8s.io/mount-utils"
+	"k8s.io/utils/integer"
 )
 
 const (
@@ -210,12 +207,19 @@ type Dependencies struct {
 	Options []Option
 
 	// Injected Dependencies
-	Auth                server.AuthInterface
-	CAdvisorInterface   cadvisor.Interface
-	Cloud               cloudprovider.Interface
-	ContainerManager    cm.ContainerManager
-	DockerOptions       *DockerOptions
-	EventClient         v1core.EventsGetter
+	Auth              server.AuthInterface
+	CAdvisorInterface cadvisor.Interface
+	Cloud             cloudprovider.Interface
+	ContainerManager  cm.ContainerManager
+	DockerOptions     *DockerOptions
+	EventClient       v1core.EventsGetter
+	// ADDED by zhangjie
+	LocalClient *localclient.LocalClient
+	// ADDED by zhangjie
+	RootTopic string
+	// ADDED by zhangjie
+	NodeName string
+
 	HeartbeatClient     clientset.Interface
 	OnHeartbeatFailure  func()
 	KubeClient          clientset.Interface
@@ -878,17 +882,22 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	klet.softAdmitHandlers.AddPodAdmitHandler(lifecycle.NewNoNewPrivsAdmitHandler(klet.containerRuntime))
 	klet.softAdmitHandlers.AddPodAdmitHandler(lifecycle.NewProcMountAdmitHandler(klet.containerRuntime))
 
-	leaseDuration := time.Duration(kubeCfg.NodeLeaseDurationSeconds) * time.Second
-	renewInterval := time.Duration(float64(leaseDuration) * nodeLeaseRenewIntervalFraction)
-	klet.nodeLeaseController = lease.NewController(
-		klet.clock,
-		klet.heartbeatClient,
-		string(klet.nodeName),
-		kubeCfg.NodeLeaseDurationSeconds,
-		klet.onRepeatedHeartbeatFailure,
-		renewInterval,
-		v1.NamespaceNodeLease,
-		util.SetNodeOwnerFunc(klet.heartbeatClient, string(klet.nodeName)))
+	// DELETED By zhangjie
+	/*
+		leaseDuration := time.Duration(kubeCfg.NodeLeaseDurationSeconds) * time.Second
+		renewInterval := time.Duration(float64(leaseDuration) * nodeLeaseRenewIntervalFraction)
+		klet.nodeLeaseController = lease.NewController(
+			klet.clock,
+			klet.heartbeatClient,
+			string(klet.nodeName),
+			kubeCfg.NodeLeaseDurationSeconds,
+			klet.onRepeatedHeartbeatFailure,
+			renewInterval,
+			v1.NamespaceNodeLease,
+			util.SetNodeOwnerFunc(klet.heartbeatClient, string(klet.nodeName)))
+	*/
+	// ADDED BY zhangjie
+	klet.nodeLeaseController = oyLeasecontroller.NewController(kubeDeps.LocalClient.GetClient(), kubeDeps.RootTopic, kubeDeps.NodeName)
 
 	klet.shutdownManager = nodeshutdown.NewManager(klet.GetActivePods, killPodNow(klet.podWorkers, kubeDeps.Recorder), kubeCfg.ShutdownGracePeriod.Duration, kubeCfg.ShutdownGracePeriodCriticalPods.Duration)
 
