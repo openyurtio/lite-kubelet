@@ -1,13 +1,12 @@
 ---
-name: Bug Report
-about: Create a report to help us improve
-title: "[BUG]"
-labels: kind/bug
+name: Question
+about: Question about OpenYurt.
+title: "[Question]"
+labels: kind/question
 
 ---
 
-<!-- Please use this template while reporting a bug and provide as much info as possible. Not doing so may result in your bug not being addressed in a timely manner. Thanks!-->
-
+<!-- Please use this template to ask question. Thanks!-->
 
 **What happened**:
 
@@ -26,5 +25,4 @@ labels: kind/bug
 - Others:
 
 **others**
-
-/kind bug
+/kind question
