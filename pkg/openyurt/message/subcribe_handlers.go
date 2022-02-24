@@ -68,7 +68,7 @@ func dealWithSubcribeDate(client mqtt.Client, rootTopic, nodeName string, subcri
 			}
 		}
 
-		if err := savePodToObjectFile(subcribeData.PodData); err != nil {
+		if err := savePodToObjectFile(subcribeData.PodData, nodeName); err != nil {
 			klog.Errorf("Save pod object to file error %v", err)
 			return err
 		}
@@ -108,7 +108,13 @@ func saveNodeToObjectFile(s *corev1.Node) error {
 	return nil
 }
 
-func savePodToObjectFile(s *corev1.Pod) error {
+func savePodToObjectFile(s *corev1.Pod, nodeName string) error {
+	if s == nil {
+		return nil
+	}
+	if s.Spec.NodeName != nodeName {
+		return fmt.Errorf("pod.spec.nodeName is %s not %s", s.Spec.NodeName, nodeName)
+	}
 
 	dateBytes, err := yaml.Marshal(s)
 	if err != nil {

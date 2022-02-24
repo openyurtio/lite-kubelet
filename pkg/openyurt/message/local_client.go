@@ -124,7 +124,7 @@ func cleanLocalCache(client mqtt.Client, nodename, rootTopic string) {
 			}
 			cloudMap[filepath.Base(filename)] = struct{}{}
 
-			if err := savePodToObjectFile(tmpPod); err != nil {
+			if err := savePodToObjectFile(tmpPod, nodename); err != nil {
 				klog.Error("Save pod[%s/%s] to object file error %v", tmpPod.GetNamespace(), tmpPod.GetName(), err)
 				continue
 			}

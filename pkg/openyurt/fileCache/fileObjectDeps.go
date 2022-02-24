@@ -203,6 +203,9 @@ func (f *FilePodDeps) GetFullFileName(obj interface{}) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if len(name) == 0 {
+		return "", fmt.Errorf("can not get filename by object")
+	}
 	return filepath.Join(f.GetDir(), name), nil
 }
 
