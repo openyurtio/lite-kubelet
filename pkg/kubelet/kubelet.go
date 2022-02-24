@@ -19,6 +19,7 @@ package kubelet
 import (
 	"crypto/tls"
 	"fmt"
+	"k8s.io/kubernetes/pkg/openyurt/oyImages"
 	"math"
 	"net"
 	"net/http"
@@ -270,6 +271,10 @@ func makePodSourceConfig(kubeCfg *kubeletconfiginternal.KubeletConfiguration, ku
 	// define file config source
 	if kubeCfg.StaticPodPath != "" {
 		klog.Infof("Adding pod path: %v", kubeCfg.StaticPodPath)
+		if err := os.MkdirAll(kubeCfg.StaticPodPath, os.ModePerm); err != nil {
+			klog.Fatalf("Failed to create static manifest source directory[%s]: %v", kubeCfg.StaticPodPath, err)
+			return nil, err
+		}
 		config.NewSourceFile(kubeCfg.StaticPodPath, nodeName, kubeCfg.FileCheckFrequency.Duration, cfg.Channel(kubetypes.FileSource), kubetypes.FileSource)
 	}
 
@@ -422,15 +427,15 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	daemonEndpoints := &v1.NodeDaemonEndpoints{
 		KubeletEndpoint: v1.DaemonEndpoint{Port: kubeCfg.Port},
 	}
-
+	// DELETE BY zhangjie
+	// eviction Manager 不需要， 删除
+	/*
 	imageGCPolicy := images.ImageGCPolicy{
 		MinAge:               kubeCfg.ImageMinimumGCAge.Duration,
 		HighThresholdPercent: int(kubeCfg.ImageGCHighThresholdPercent),
 		LowThresholdPercent:  int(kubeCfg.ImageGCLowThresholdPercent),
 	}
-	// DELETE BY zhangjie
-	// eviction Manager 不需要， 删除
-	/*
+
 		enforceNodeAllocatable := kubeCfg.EnforceNodeAllocatable
 		if experimentalNodeAllocatableIgnoreEvictionThreshold {
 			// Do not provide kubeCfg.EnforceNodeAllocatable to eviction threshold parsing if we are not enforcing Evictions
@@ -746,11 +751,18 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	klet.containerGC = containerGC
 	klet.containerDeletor = newPodContainerDeletor(klet.containerRuntime, integer.IntMax(containerGCPolicy.MaxPerPodContainer, minDeadContainerInPod))
 
+	// ADD by zhangjie
+	oyimageGCPolicy := oyImages.ImageGCPolicy{
+		MinAge:              30*time.Minute ,
+	}
 	// setup imageManager
-	imageManager, err := images.NewImageGCManager(klet.containerRuntime, klet.StatsProvider, kubeDeps.Recorder, nodeRef, imageGCPolicy, crOptions.PodSandboxImage)
+	// CHANGED BY zhangjie
+	//imageManager, err := images.NewImageGCManager(klet.containerRuntime, klet.StatsProvider, kubeDeps.Recorder, nodeRef, imageGCPolicy, crOptions.PodSandboxImage)
+	imageManager, err := oyImages.NewImageGCManager(klet.containerRuntime, klet.StatsProvider, kubeDeps.Recorder, nodeRef, oyimageGCPolicy, crOptions.PodSandboxImage)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize image manager: %v", err)
 	}
+
 	klet.imageManager = imageManager
 
 	if kubeCfg.ServerTLSBootstrap && kubeDeps.TLSOptions != nil && utilfeature.DefaultFeatureGate.Enabled(features.RotateKubeletServerCertificate) {

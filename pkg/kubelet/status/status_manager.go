@@ -163,8 +163,9 @@ func (m *manager) Start() {
 		for {
 			select {
 			case syncRequest := <-m.podStatusChannel:
-				klog.V(5).Infof("Status Manager: syncing pod: %q, with status: (%d, %v) from podStatusChannel",
-					syncRequest.podUID, syncRequest.status.version, syncRequest.status.status)
+				klog.V(5).Infof("Status Manager: syncing pod: %q [%s][%s], with status: (%d, %v) from podStatusChannel",
+					syncRequest.podUID, syncRequest.status.podNamespace, syncRequest.status.podName,
+					syncRequest.status.version, syncRequest.status.status)
 				m.syncPod(syncRequest.podUID, syncRequest.status)
 			case <-syncTicker:
 				klog.V(5).Infof("Status Manager: syncing batch")
@@ -539,6 +540,7 @@ func (m *manager) syncPod(uid types.UID, status versionedPodStatus) {
 	}
 
 	// TODO: make me easier to express from client code
+	klog.V(3).Infof("Prepare to get pod [%s/%s] from the server", status.podNamespace, status.podName)
 	pod, err := m.kubeClient.CoreV1().Pods(status.podNamespace).Get(context.TODO(), status.podName, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
 		klog.V(3).Infof("Pod %q does not exist on the server", format.PodDesc(status.podName, status.podNamespace, uid))
