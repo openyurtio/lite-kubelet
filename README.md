@@ -82,12 +82,71 @@ KUBE_BUILD_PLATFORMS=linux/amd64 make WHAT=cmd/kubelet GOFLAGS=-v
 - Delete runtimeClassManager
   
 - Add mqtt source file 
+  
+  Kubelet gets the pod declaration file in three ways: static pod Path, manifest-url, and apiserver.
+  
+  We removed the logic to get pod declaration files from manifest-URL and Apiserver. Added new logic to get pod declaration file for mqttfile.
+  
+  To get the pod declaration file via mqtt, the pod contents are first retrieved from the MQTT, cached locally, and then created in a staticPod-like fashion 
+  
+ pkg/kubelet/kubelet.go L278
+ ```
+ 	updates := cfg.Channel(kubetypes.MqttFileSource)
+ 	send := func(cache cache.Indexer) {
+ 		pods := make([]*v1.Pod, 0, 10)
+ 		for _, o := range cache.List() {
+ 			if p, ok := o.(*v1.Pod); ok {
+ 				klog.V(4).Infof("Get Pod [%s][%s] from local mqtt cache", p.GetNamespace(), p.GetName())
+ 				pods = append(pods, p)
+ 			}
+ 		}
+ 		updates <- kubetypes.PodUpdate{Pods: pods, Op: kubetypes.SET, Source: kubetypes.MqttFileSource}
+ 	}
+ 	fileCache.NewFileObiectIndexer(fileCache.NewDefaultFilePodDeps(), false, send)
  
- 
+ ```
+
+- The `clientset.Interface` Interface is reimplemented
+  We redefined the `Clientset` structure, reimplemented the [clientset.Interface] Interface through [fakekube.Clientset], and reimplemented some methods.
+  
+  The method of reimplementation is as follows:
+  ```
+  CoreV1().Pods().Get()  
+  CoreV1().Pods().Create()  
+  CoreV1().Pods().Delete()  
+  CoreV1().Pods().Patch()  
+  ```
+  
+  ```
+  CoreV1().Nodes().Create()
+  CoreV1().Nodes().Patch()
+  CoreV1().Nodes().Delete()
+  ```
+  
+  ```
+  CoreV1().Events().CreateWithEventNamespace()
+  CoreV1().Events().UpdateWithEventNamespace()  
+  CoreV1().Events().PatchWithEventNamespace()
+  ```
+  
+  ```
+  CoordinationV1().Leases().Get()
+  CoordinationV1().Leases().Create()
+  CoordinationV1().Leases().Update()
+  ```
+  
+   After tailoring kubelet, we found that kubelet only needs to interact with `Node/Pod/Events/Lease` resource objects. So we reimplemented the methods of these resource objects from the interface to call apiserver to interact through MQTT. Then kole-Controller, the cloud controller, requests apiserver on behalf of it
+  
+     
+  ref: pkg/openyurt/clientSet/clientset.go
+  
+
 ## TODO list
 
-1 替换构建的二进制名字
-2 删除无关的代码
+- Change the built binary name kubelet to lite-kubelet
+- Delete irrelevant code
 
 [kubernetes]: https://github.com/kubernetes/kubernetes
 [Kubelet]: https://github.com/kubernetes/kubernetes/tree/master/cmd/kubelet
+[clientset.Interface]: https://github.com/kubernetes/client-go/blob/cc43a708a08eb9ff6a436f0cb00c5ee05121d2cd/kubernetes/clientset.go#L75
+[fakekube.Clientset]: https://github.com/kubernetes/client-go/blob/cc43a708a08eb9ff6a436f0cb00c5ee05121d2cd/kubernetes/fake/clientset_generated.go#L151
