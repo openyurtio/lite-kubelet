@@ -16,13 +16,9 @@ limitations under the License.
 package oyLeasecontroller
 
 import (
-	"time"
-
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
 	"k8s.io/component-helpers/apimachinery/lease"
-	"k8s.io/klog/v2"
-	"k8s.io/kubernetes/pkg/openyurt/message"
 )
 
 type controller struct {
@@ -55,6 +51,8 @@ type controller struct {
 // In the future, if kole-controller supports the ability to subscribe to wills, lite-kubelet will not need to send heartbeat packets regularly at all,
 // further reducing the number of messages to be sent.
 func (c *controller) Run(stopCh <-chan struct{}) {
+
+	/*
 	ticker := time.NewTicker(time.Minute*5)
 	defer func() {
 		ticker.Stop()
@@ -85,7 +83,7 @@ func (c *controller) Run(stopCh <-chan struct{}) {
 			return
 		}
 	}
-
+	 */
 }
 
 // NewController constructs and returns a controller
