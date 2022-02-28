@@ -19,7 +19,6 @@ package kubelet
 import (
 	"crypto/tls"
 	"fmt"
-	"k8s.io/kubernetes/pkg/openyurt/oyImages"
 	"math"
 	"net"
 	"net/http"
@@ -31,6 +30,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"k8s.io/kubernetes/pkg/openyurt/oyImages"
 
 	cadvisorapi "github.com/google/cadvisor/info/v1"
 	v1 "k8s.io/api/core/v1"
@@ -283,6 +284,10 @@ func makePodSourceConfig(kubeCfg *kubeletconfiginternal.KubeletConfiguration, ku
 		pods := make([]*v1.Pod, 0, 10)
 		for _, o := range cache.List() {
 			if p, ok := o.(*v1.Pod); ok {
+				if len(p.GetName()) == 0 {
+					klog.Warningf("Pod name is null, so do not send PodUpdat channel")
+					continue
+				}
 				klog.V(4).Infof("Get Pod [%s][%s] from local mqtt cache", p.GetNamespace(), p.GetName())
 				pods = append(pods, p)
 			}
@@ -430,30 +435,30 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	// DELETE BY zhangjie
 	// eviction Manager 不需要， 删除
 	/*
-	imageGCPolicy := images.ImageGCPolicy{
-		MinAge:               kubeCfg.ImageMinimumGCAge.Duration,
-		HighThresholdPercent: int(kubeCfg.ImageGCHighThresholdPercent),
-		LowThresholdPercent:  int(kubeCfg.ImageGCLowThresholdPercent),
-	}
-
-		enforceNodeAllocatable := kubeCfg.EnforceNodeAllocatable
-		if experimentalNodeAllocatableIgnoreEvictionThreshold {
-			// Do not provide kubeCfg.EnforceNodeAllocatable to eviction threshold parsing if we are not enforcing Evictions
-			enforceNodeAllocatable = []string{}
+		imageGCPolicy := images.ImageGCPolicy{
+			MinAge:               kubeCfg.ImageMinimumGCAge.Duration,
+			HighThresholdPercent: int(kubeCfg.ImageGCHighThresholdPercent),
+			LowThresholdPercent:  int(kubeCfg.ImageGCLowThresholdPercent),
 		}
 
-		thresholds, err := eviction.ParseThresholdConfig(enforceNodeAllocatable, kubeCfg.EvictionHard, kubeCfg.EvictionSoft, kubeCfg.EvictionSoftGracePeriod, kubeCfg.EvictionMinimumReclaim)
-		if err != nil {
-			return nil, err
-		}
+			enforceNodeAllocatable := kubeCfg.EnforceNodeAllocatable
+			if experimentalNodeAllocatableIgnoreEvictionThreshold {
+				// Do not provide kubeCfg.EnforceNodeAllocatable to eviction threshold parsing if we are not enforcing Evictions
+				enforceNodeAllocatable = []string{}
+			}
 
-		evictionConfig := eviction.Config{
-			PressureTransitionPeriod: kubeCfg.EvictionPressureTransitionPeriod.Duration,
-			MaxPodGracePeriodSeconds: int64(kubeCfg.EvictionMaxPodGracePeriod),
-			Thresholds:               thresholds,
-			KernelMemcgNotification:  kernelMemcgNotification,
-			PodCgroupRoot:            kubeDeps.ContainerManager.GetPodCgroupRoot(),
-		}
+			thresholds, err := eviction.ParseThresholdConfig(enforceNodeAllocatable, kubeCfg.EvictionHard, kubeCfg.EvictionSoft, kubeCfg.EvictionSoftGracePeriod, kubeCfg.EvictionMinimumReclaim)
+			if err != nil {
+				return nil, err
+			}
+
+			evictionConfig := eviction.Config{
+				PressureTransitionPeriod: kubeCfg.EvictionPressureTransitionPeriod.Duration,
+				MaxPodGracePeriodSeconds: int64(kubeCfg.EvictionMaxPodGracePeriod),
+				Thresholds:               thresholds,
+				KernelMemcgNotification:  kernelMemcgNotification,
+				PodCgroupRoot:            kubeDeps.ContainerManager.GetPodCgroupRoot(),
+			}
 	*/
 
 	var serviceLister corelisters.ServiceLister
@@ -753,7 +758,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 
 	// ADD by zhangjie
 	oyimageGCPolicy := oyImages.ImageGCPolicy{
-		MinAge:              30*time.Minute ,
+		MinAge: 30 * time.Minute,
 	}
 	// setup imageManager
 	// CHANGED BY zhangjie
