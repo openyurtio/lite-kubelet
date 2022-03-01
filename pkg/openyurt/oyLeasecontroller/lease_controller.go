@@ -16,13 +16,9 @@ limitations under the License.
 package oyLeasecontroller
 
 import (
-	"time"
-
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
 	"k8s.io/component-helpers/apimachinery/lease"
-	"k8s.io/klog/v2"
-	"k8s.io/kubernetes/pkg/openyurt/message"
 )
 
 type controller struct {
@@ -31,8 +27,33 @@ type controller struct {
 	nodeName  string
 }
 
+// Run
+// Normally kubelet updates the lease to Apiserver every 10 seconds to maintain the node ready.
+// If the lease heartbeat is sent through MQTT protocol, and the number of hosts is very large, too many heartbeats will be sent every day.
+// Due to the limited ability of kole-controller to consume messages, This may cause message accumulation and the host lease status cannot be updated quickly.
+// Too much news also brings more economic costs.
+
+// The Run method regularly sends heartbeat information to the kole-controller through MQTT
+// and reduces the heartbeat sending time interval.
+// We believe that pod eviction is not required in the lightweight scenario, so it is acceptable to delay the update of host state.
+// Considering the cost and the consumption speed of messages, We temporarily set the heartbeat interval to 5 minutes.
+// But the heartbeat information is not a lease object.
+
+//The kole-controller updates the lease object every 10 seconds instead of the original kubelet lease logic after receiving the heartbeat message .
+// When the kole-controller does not receive the heartbeat message from lite-kubelet within 1.5 x 5 m,
+// it considers that the lite-node is offline and stops updating the lease information.
+
+// After some time, kube-controller-manger determines whether the node is readdy based on the lease update time, This is the original logic of kube-controller-manager
+
+// TODO
+// The MQTT3 protocol supports testamentary mode (Will Message),
+// in which MTQT Brokers send will messages indicating that certain lite-node are offline when they are unexpectedly disconnected, offline, or disconnected from the MQTT broker.
+// In the future, if kole-controller supports the ability to subscribe to wills, lite-kubelet will not need to send heartbeat packets regularly at all,
+// further reducing the number of messages to be sent.
 func (c *controller) Run(stopCh <-chan struct{}) {
-	ticker := time.NewTicker(time.Minute)
+
+	/*
+	ticker := time.NewTicker(time.Minute*5)
 	defer func() {
 		ticker.Stop()
 		klog.Errorf("Heartbeat controller stoped ...")
@@ -62,7 +83,7 @@ func (c *controller) Run(stopCh <-chan struct{}) {
 			return
 		}
 	}
-
+	 */
 }
 
 // NewController constructs and returns a controller

@@ -72,6 +72,9 @@ func (n *nodes) Create(ctx context.Context, node *corev1.Node, opts v1.CreateOpt
 }
 
 func (n *nodes) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *corev1.Node, err error) {
+
+	// pkg/kubelet/kubelet_node_status.go tryUpdateNodeStatus
+
 	patchData := PublishPatchData(ObjectTypeNode, true, n.nodename, &corev1.Node{
 		ObjectMeta: v1.ObjectMeta{
 			Name: name,
