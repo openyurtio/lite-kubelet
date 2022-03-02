@@ -135,6 +135,7 @@ func (s *ObjectSourceFile) listConfig() error {
 		return s.extractFromDir(path)
 
 	case statInfo.Mode().IsRegular():
+		klog.V(4).Infof("listConfig: find path %s is regular, create watchfile event", path)
 		s.watchEvents <- &watchFileEvent{path, FileListAdd}
 		return nil
 	default:
@@ -167,6 +168,7 @@ func (s *ObjectSourceFile) extractFromDir(name string) error {
 		case statInfo.Mode().IsDir():
 			klog.Errorf("Not recursing into manifest path %q", path)
 		case statInfo.Mode().IsRegular():
+			klog.V(4).Infof("extractFromDir: find path %s is regular, create watchfile event", path)
 			s.watchEvents <- &watchFileEvent{path, FileListAdd}
 		default:
 			klog.Errorf("Manifest path %q is not a directory or file: %v", path, statInfo.Mode())
@@ -231,6 +233,7 @@ func (s *ObjectSourceFile) produceWatchEvent(e *fsnotify.Event) error {
 		return nil
 	}
 
+	klog.V(4).Infof("produceWatchEvent: name %s, type %s", e.Name, eventType)
 	s.watchEvents <- &watchFileEvent{e.Name, eventType}
 	return nil
 }
