@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
@@ -94,7 +93,7 @@ func cleanLocalCache(client mqtt.Client, nodename, rootTopic string) {
 			klog.Errorf("Send start data error when mqtt client connected. %v", err)
 			continue
 		}
-		ackdata, ok := GetDefaultTimeoutCache().PopWait(data.Identity, time.Second*5)
+		ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity)
 		if !ok {
 			klog.Errorf("Get ack data[%s] from timeoutCache timeout  when get start data", data.Identity)
 			continue

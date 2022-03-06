@@ -18,7 +18,6 @@ package message
 import (
 	"context"
 	"fmt"
-	"time"
 
 	coordinationv1 "k8s.io/api/coordination/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -55,7 +54,7 @@ func (l *leases) Get(ctx context.Context, name string, options metav1.GetOptions
 		klog.Errorf("Publish get lease[%s][%s] data error %v", l.namespace, name, err)
 		return nil, apierrors.NewInternalError(fmt.Errorf("publish get lease data error %v", err))
 	}
-	ackdata, ok := GetDefaultTimeoutCache().PopWait(data.Identity, time.Second*5)
+	ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity)
 	if !ok {
 		klog.Errorf("Get ack data[%s] from timeoutCache timeout  when get lease", data.Identity)
 		return nil, errors.NewTimeoutError("lease", 5)
@@ -79,7 +78,7 @@ func (l *leases) Create(ctx context.Context, lease *coordinationv1.Lease, opts m
 		klog.Errorf("Publish create lease[%s][%s] data error %v", lease.Namespace, lease.Name, err)
 		return nil, apierrors.NewInternalError(fmt.Errorf("publish create lease data error %v", err))
 	}
-	ackdata, ok := GetDefaultTimeoutCache().PopWait(data.Identity, time.Second*5)
+	ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity)
 	if !ok {
 		klog.Errorf("Get ack data[%s] from timeoutCache timeout  when create lease", data.Identity)
 		return lease, errors.NewTimeoutError("lease", 5)
@@ -102,7 +101,7 @@ func (l *leases) Update(ctx context.Context, lease *coordinationv1.Lease, opts m
 		klog.Errorf("Publish update lease[%s][%s] data error %v", lease.Namespace, lease.Name, err)
 		return nil, apierrors.NewInternalError(fmt.Errorf("publish update lease data error %v", err))
 	}
-	ackdata, ok := GetDefaultTimeoutCache().PopWait(data.Identity, time.Second*5)
+	ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity)
 	if !ok {
 		klog.Errorf("Get ack data[%s] from timeoutCache timeout  when update lease", data.Identity)
 		return lease, errors.NewTimeoutError("lease", 5)

@@ -18,7 +18,6 @@ package message
 import (
 	"context"
 	"fmt"
-	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
@@ -55,7 +54,7 @@ func (n *nodes) Create(ctx context.Context, node *corev1.Node, opts v1.CreateOpt
 		klog.Errorf("Publish create node[%s] data error %v", node.Name, err)
 		return nil, apierrors.NewInternalError(fmt.Errorf("publish create node data error %v", err))
 	}
-	ackdata, ok := GetDefaultTimeoutCache().PopWait(data.Identity, time.Second*5)
+	ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity)
 	if !ok {
 		klog.Errorf("Get ack data[%s] from timeout cache timeout, when create node", data.Identity)
 		return node, errors.NewTimeoutError("node", 5)
@@ -85,7 +84,7 @@ func (n *nodes) Patch(ctx context.Context, name string, pt types.PatchType, data
 		klog.Errorf("Publish patch node[%s] data error %v", name, err)
 		return nil, apierrors.NewInternalError(fmt.Errorf("publish patch node data error %v", err))
 	}
-	ackdata, ok := GetDefaultTimeoutCache().PopWait(patchData.Identity, time.Second*5)
+	ackdata, ok := GetDefaultTimeoutCache().Pop(patchData.Identity)
 	if !ok {
 		klog.Errorf("Get ack data[%s] from timeout cache timeout, when patch node", patchData.Identity)
 		return nil, errors.NewTimeoutError("node", 5)
