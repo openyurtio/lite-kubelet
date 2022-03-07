@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -86,7 +85,7 @@ func (p *pods) Get(ctx context.Context, name string, options metav1.GetOptions) 
 		klog.Errorf("Publish get pod[%s][%s] data error %v", p.namespace, name, err)
 		return nil, apierrors.NewInternalError(fmt.Errorf("publish get pod data error %v", err))
 	}
-	ackdata, ok := GetDefaultTimeoutCache().PopWait(data.Identity, time.Second*5)
+	ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity)
 	if !ok {
 		klog.Errorf("Get ack data[%s] from timeoutCache timeout  when get pod", data.Identity)
 		return nil, errors.NewTimeoutError("pod", 5)
@@ -116,7 +115,7 @@ func (p *pods) Create(ctx context.Context, pod *corev1.Pod, opts metav1.CreateOp
 		klog.Errorf("Publish create pod[%s][%s] data error %v", pod.Namespace, pod.Name, err)
 		return nil, apierrors.NewInternalError(fmt.Errorf("publish create pod data error %v", err))
 	}
-	ackdata, ok := GetDefaultTimeoutCache().PopWait(data.Identity, time.Second*5)
+	ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity)
 	if !ok {
 		klog.Errorf("Get ack data[%s] from timeoutCache timeout when create pod", data.Identity)
 		return pod, errors.NewTimeoutError("lease", 5)
@@ -154,7 +153,7 @@ func (p *pods) Delete(ctx context.Context, name string, opts metav1.DeleteOption
 		klog.Errorf("Publish delete pod[%s][%s] data error %v", p.namespace, name, err)
 		return apierrors.NewInternalError(fmt.Errorf("publish delete pod data error %v", err))
 	}
-	ackdata, ok := GetDefaultTimeoutCache().PopWait(data.Identity, time.Second*5)
+	ackdata, ok := GetDefaultTimeoutCache().Pop(data.Identity)
 	if !ok {
 		klog.Errorf("Get ack data[%s] from timeoutCache timeout when delete pod", data.Identity)
 		return errors.NewTimeoutError("pods", 5)
@@ -183,7 +182,7 @@ func (p *pods) Patch(ctx context.Context, name string, pt types.PatchType, data 
 		klog.Errorf("Publish patch pod[%s] data error %v", name, err)
 		return nil, apierrors.NewInternalError(fmt.Errorf("publish patch pod data error %v", err))
 	}
-	ackdata, ok := GetDefaultTimeoutCache().PopWait(patchData.Identity, time.Second*5)
+	ackdata, ok := GetDefaultTimeoutCache().Pop(patchData.Identity)
 	if !ok {
 		klog.Errorf("Get ack data[%s] from timeout cache timeout, when patch pod", patchData.Identity)
 		return nil, errors.NewTimeoutError("pod", 5)

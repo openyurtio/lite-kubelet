@@ -72,6 +72,12 @@ func (t *TimeoutCache) run(period, timeout time.Duration) {
 	}
 }
 
+func (t *TimeoutCache) Pop(key string) (*AckData, bool) {
+	// TODO
+	// This time will be reduced as the cloud controller's ability to consume messages increases.
+	return t.PopWait(key, time.Minute)
+}
+
 // PopWait retrun false , when timeout
 // Get the key value, return true if get value, and delete it from the cache
 // If not, wait until the corresponding key and value are obtained
