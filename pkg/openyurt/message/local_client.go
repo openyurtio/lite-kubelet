@@ -56,7 +56,8 @@ func (l *LocalClient) GetClient() mqtt.Client {
 
 func (l *LocalClient) Send(obj *PublishData) error {
 	if err := Mqtt3Send(l.send, GetDataTopic(l.rootTopic), obj); err != nil {
-		klog.Errorf("Publish %s error", obj)
+		klog.Errorf("Publish %s error %v", obj, err)
+		return err
 	}
 	klog.V(4).Infof("Publish %s successful", obj)
 	return nil
