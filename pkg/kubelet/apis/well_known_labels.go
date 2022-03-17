@@ -32,8 +32,8 @@ const (
 	LabelArch = "beta.kubernetes.io/arch"
 
 	// ADDED by zhangjie
-	LabelLite      = "openyurt.io/node-type"
-	LabelLiteValue = "lite-node"
+	LabelLite      = "type"
+	LabelLiteValue = "lite-kubelet"
 )
 
 var kubeletLabels = sets.NewString(
