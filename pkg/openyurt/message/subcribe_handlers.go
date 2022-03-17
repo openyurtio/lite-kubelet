@@ -89,7 +89,9 @@ func dealWithSubcribeDate(client mqtt.Client, rootTopic, nodeName string, subcri
 }
 
 func saveNodeToObjectFile(s *corev1.Node) error {
-
+	if s == nil {
+		return nil
+	}
 	dateBytes, err := yaml.Marshal(s)
 	if err != nil {
 		klog.Errorf("Marshal node[%s/%s] to bytes error %v",

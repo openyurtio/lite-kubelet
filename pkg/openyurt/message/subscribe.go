@@ -51,6 +51,7 @@ type AckDataStartObject struct {
 	PodsList      []*corev1.Pod       `json:"pods_list,omitempty"`
 	SecretList    []*corev1.Secret    `json:"secret_list,omitempty"`
 	ConfigMapList []*corev1.ConfigMap `json:"config_map_list,omitempty"`
+	Node          *corev1.Node        `json:"node,omitempty"`
 }
 
 func (p *AckData) String() string {
