@@ -115,7 +115,7 @@ func newMqtt3Client(
 	return client
 }
 
-func Mqtt3Send(c mqtt.Client, topic string, object *PublishData) error {
+func Mqtt3Send(c mqtt.Client, topic string, object *PublishData, thin MessageThin) error {
 	opts := c.OptionsReader()
 	clientID := opts.ClientID()
 
@@ -125,7 +125,13 @@ func Mqtt3Send(c mqtt.Client, topic string, object *PublishData) error {
 		return err
 	}
 
-	token := c.Publish(topic, 1, false, data)
+	thinData, err := thin.Compress(data)
+	if err != nil {
+		klog.Errorf("Mqtt3Send topic %s data ,compress error %v", topic, err)
+		return err
+	}
+
+	token := c.Publish(topic, 1, false, thinData)
 	if token.WaitTimeout(time.Second * 3) {
 		if err := token.Error(); err != nil {
 			klog.Errorf("%s publish topic[%s] data error %v", clientID, topic, err)

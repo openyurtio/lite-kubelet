@@ -28,10 +28,15 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func subscribeHandlers(nodeName, rootTopic string) map[string]mqtt.MessageHandler {
+func subscribeHandlers(nodeName, rootTopic string, thin MessageThin) map[string]mqtt.MessageHandler {
 	handlers := make(map[string]mqtt.MessageHandler)
 	handlers[GetCtlTopic(rootTopic, nodeName)] = func(client mqtt.Client, mes mqtt.Message) {
-		subcribeData, err := UnmarshalPayloadToSubscribeData(mes.Payload())
+		data, err := thin.UnCompress(mes.Payload())
+		if err != nil {
+			klog.Errorf("Uncompress data from topic %s error %v", mes.Topic(), err)
+			return
+		}
+		subcribeData, err := UnmarshalPayloadToSubscribeData(data)
 		if err != nil {
 			klog.Errorf("Unmarshal message payload[topic %s] to subscribedata error %v.", mes.Topic(), err)
 			return
