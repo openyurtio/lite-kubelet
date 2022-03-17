@@ -150,6 +150,12 @@ func cleanLocalCache(client mqtt.Client, nodename, rootTopic string) {
 				klog.Infof("The pod corresponding to localcache file %s exist in the cloud, so keep the localcache file, do nothing", f)
 			}
 		}
+
+		if err := saveNodeToObjectFile(startdata.Node); err != nil {
+			klog.Errorf("Save Node %s to object file error %v", nodename, err)
+			continue
+		}
+
 		return
 	}
 }

@@ -233,7 +233,7 @@ func (s *ObjectSourceFile) produceWatchEvent(e *fsnotify.Event) error {
 		return nil
 	}
 
-	klog.V(4).Infof("produceWatchEvent: name %s, type %s", e.Name, eventType)
+	klog.V(4).Infof("produceWatchEvent: name %s, type %v", e.Name, eventType)
 	s.watchEvents <- &watchFileEvent{e.Name, eventType}
 	return nil
 }
