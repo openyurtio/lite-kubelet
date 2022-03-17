@@ -304,6 +304,13 @@ func (kl *Kubelet) initialNode(ctx context.Context) (*v1.Node, error) {
 		},
 		Spec: v1.NodeSpec{
 			Unschedulable: !kl.registerSchedulable,
+			Taints: []v1.Taint{
+				{
+					Key:    kubeletapis.LabelLite,
+					Value:  kubeletapis.LabelLiteValue,
+					Effect: v1.TaintEffectNoSchedule,
+				},
+			},
 		},
 	}
 	osLabels, err := getOSSpecificLabels()
@@ -522,7 +529,7 @@ func (kl *Kubelet) tryUpdateNodeStatus(tryNumber int) error {
 
 	now := kl.clock.Now()
 	// CHANGED BY zhangjie , Updates every 5 minutes
-	if now.Before(kl.lastStatusReportTime.Add(time.Minute*5)) {
+	if now.Before(kl.lastStatusReportTime.Add(time.Minute * 5)) {
 		if !podCIDRChanged && !nodeStatusHasChanged(&originalNode.Status, &node.Status) {
 			// We must mark the volumes as ReportedInUse in volume manager's dsw even
 			// if no changes were made to the node status (no volumes were added or removed
@@ -642,10 +649,10 @@ func (kl *Kubelet) defaultNodeStatusFuncs() []func(*v1.Node) error {
 	setters = append(setters,
 		// DELETE by zhangjie
 		/*
-		nodestatus.MemoryPressureCondition(kl.clock.Now, kl.evictionManager.IsUnderMemoryPressure, kl.recordNodeStatusEvent),
-		nodestatus.DiskPressureCondition(kl.clock.Now, kl.evictionManager.IsUnderDiskPressure, kl.recordNodeStatusEvent),
-		nodestatus.PIDPressureCondition(kl.clock.Now, kl.evictionManager.IsUnderPIDPressure, kl.recordNodeStatusEvent),
-		 */
+			nodestatus.MemoryPressureCondition(kl.clock.Now, kl.evictionManager.IsUnderMemoryPressure, kl.recordNodeStatusEvent),
+			nodestatus.DiskPressureCondition(kl.clock.Now, kl.evictionManager.IsUnderDiskPressure, kl.recordNodeStatusEvent),
+			nodestatus.PIDPressureCondition(kl.clock.Now, kl.evictionManager.IsUnderPIDPressure, kl.recordNodeStatusEvent),
+		*/
 
 		nodestatus.ReadyCondition(kl.clock.Now, kl.runtimeState.runtimeErrors, kl.runtimeState.networkErrors, kl.runtimeState.storageErrors, validateHostFunc, kl.containerManager.Status, kl.shutdownManager.ShutdownStatus, kl.recordNodeStatusEvent),
 		nodestatus.VolumesInUse(kl.volumeManager.ReconcilerStatesHasBeenSynced, kl.volumeManager.GetVolumesInUse),
