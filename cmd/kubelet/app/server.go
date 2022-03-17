@@ -600,6 +600,7 @@ func run(ctx context.Context, s *options.KubeletServer, kubeDeps *kubelet.Depend
 			s.MqttInstance,
 			s.MqttGroup,
 			s.MqttRootTopic,
+			&localclient.Gzip{},
 		)
 		if err != nil {
 			return err

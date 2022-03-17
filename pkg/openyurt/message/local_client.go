@@ -41,13 +41,14 @@ type MessageSendor interface {
 }
 
 type LocalClient struct {
-	nodename  string
-	rootTopic string
-	send      mqtt.Client
-	nodes     cache.Indexer
-	leases    cache.Indexer
-	pods      cache.Indexer
-	events    cache.Indexer
+	nodename    string
+	rootTopic   string
+	send        mqtt.Client
+	nodes       cache.Indexer
+	leases      cache.Indexer
+	pods        cache.Indexer
+	events      cache.Indexer
+	messageThin MessageThin
 }
 
 func (l *LocalClient) GetClient() mqtt.Client {
@@ -55,7 +56,7 @@ func (l *LocalClient) GetClient() mqtt.Client {
 }
 
 func (l *LocalClient) Send(obj *PublishData) error {
-	if err := Mqtt3Send(l.send, GetDataTopic(l.rootTopic), obj); err != nil {
+	if err := Mqtt3Send(l.send, GetDataTopic(l.rootTopic), obj, l.messageThin); err != nil {
 		klog.Errorf("Publish %s error %v", obj, err)
 		return err
 	}
@@ -83,14 +84,14 @@ func (l *LocalClient) GetNodesIndexer() cache.Indexer {
 	return l.nodes
 }
 
-func cleanLocalCache(client mqtt.Client, nodename, rootTopic string) {
+func cleanLocalCache(client mqtt.Client, nodename, rootTopic string, thin MessageThin) {
 	// try 3 times
 	klog.Infof("Prepare to clean local useless caches")
 	defer klog.Infof("Clean local useless caches end ...")
 
 	for i := 0; i < 3; i++ {
 		data := PublishStartData(nodename)
-		if err := Mqtt3Send(client, GetDataTopic(rootTopic), data); err != nil {
+		if err := Mqtt3Send(client, GetDataTopic(rootTopic), data, thin); err != nil {
 			klog.Errorf("Send start data error when mqtt client connected. %v", err)
 			continue
 		}
@@ -161,7 +162,8 @@ func cleanLocalCache(client mqtt.Client, nodename, rootTopic string) {
 }
 
 func NewLocalClient(nodename, broker string, port int,
-	accessKey, secretKey, instance, group, rootTopic string) (*LocalClient, error) {
+	accessKey, secretKey, instance, group, rootTopic string,
+	messThin MessageThin) (*LocalClient, error) {
 
 	nodeIndexer := fileCache.NewFileObiectIndexer(fileCache.NewDefaultFileNodeDeps(), false, nil)
 
@@ -170,7 +172,7 @@ func NewLocalClient(nodename, broker string, port int,
 	passwd := GetSignature(clientID, secretKey)
 
 	//c := NewMqttClient(broker, port, clientID, username, passwd)
-	subHandlers := subscribeHandlers(nodename, rootTopic)
+	subHandlers := subscribeHandlers(nodename, rootTopic, messThin)
 
 	/*
 		offlineData := PublishOfflineData(nodename)
@@ -205,20 +207,21 @@ func NewLocalClient(nodename, broker string, port int,
 			}
 			klog.Infof("Subscribe all topic successfully")
 			// publish register info
-			cleanLocalCache(client, nodename, rootTopic)
+			cleanLocalCache(client, nodename, rootTopic, messThin)
 
 		}, func(client mqtt.Client, err error) {
 			klog.Warningf("mqtt client connect lost:%v", err)
 		})
 
 	l := &LocalClient{
-		nodename:  nodename,
-		rootTopic: rootTopic,
-		send:      c,
-		nodes:     nodeIndexer,
-		leases:    nil,
-		events:    nil,
-		pods:      nil,
+		nodename:    nodename,
+		rootTopic:   rootTopic,
+		send:        c,
+		nodes:       nodeIndexer,
+		leases:      nil,
+		events:      nil,
+		pods:        nil,
+		messageThin: messThin,
 	}
 	return l, nil
 }
